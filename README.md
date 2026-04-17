@@ -1,352 +1,239 @@
-# Vue3 Business Admin Template
+# 疗心舍
 
-基于 Vue3 + Vite + TypeScript 的企业级后台管理系统模板，支持移动端适配和 AI 聊天功能。
+一个温暖的心理健康陪伴应用，以「关切与注视」为核心视觉基调，用缓慢、静谧的交互体验，陪伴用户度过每一个需要温暖的时刻。
 
-## 🚀 技术栈
+## 视觉理念
+
+「关切与注视」—— 像暗房里慢慢显影的照片，像电影结尾缓慢滚动的字幕，像一个安静陪伴在你身边的人。
+
+- **极简边框**：去除所有多余的边框和强烈的阴影，改用极细的分割线和低饱和度的材质感底色
+- **电影字幕排版**：克制的文字排版，加大行距，像电影字幕一样留白
+- **暗房显影动画**：所有状态切换都采用缓慢的淡入淡出效果，如同暗房里照片显影般静谧
+
+## 技术栈
 
 ### 核心技术
 - **框架**: Vue 3.5+ (Setup 语法糖 + Composition API)
 - **构建工具**: Vite 7.x
-- **语言**: TypeScript 5.x (严格模式)
-- **样式**: Tailwind CSS 3.x (自定义主题，移动端优先)
+- **语言**: TypeScript 5.x
+- **样式**: Tailwind CSS 3.x
 - **状态管理**: Pinia 3.x
 - **路由**: Vue Router 4.x
-- **网络请求**: Axios (核心封装)
-- **AI 功能**: Vercel AI SDK (@ai-sdk/openai)
-- **工程规范**: ESLint + Prettier
+- **后端代理**: Express.js (连接阿里云 DashScope 通义千问 API)
+- **数据库**: Supabase (可选，用于存储聊天记录)
 
-### 移动端适配
-- ✅ 响应式布局（360px - 1536px）
-- ✅ 底部导航栏（移动端）
-- ✅ 顶部导航栏（桌面端）
-- ✅ 触摸优化（44px 最小点击区域）
-- ✅ iOS 安全区域适配
-- ✅ 视口配置优化
+### AI 能力
+- **模型**: 阿里云通义千问 (Qwen Turbo/Plus/Max)
+- **接入方式**: 后端代理 + SSE 流式响应
+- **特色功能**: 情绪感知、安全感卡片、五感着陆练习
 
-## 📦 快速开始
+## 快速开始
 
-### 安装依赖
+### 环境要求
+- Node.js 18+
+- npm 9+
+
+### 1. 安装依赖
 
 ```bash
 npm install
 ```
 
-### 启动开发服务器
+### 2. 配置环境变量
+
+复制环境变量模板并填写实际配置：
+
+```bash
+cp .env.example .env.development
+cp server/.env.example server/.env
+```
+
+编辑 `.env.development`：
+```env
+VITE_DASHSCOPE_API_KEY=your-dashscope-api-key
+VITE_DASHSCOPE_MODEL=qwen-turbo
+VITE_BACKEND_API_URL=http://localhost:3000
+```
+
+编辑 `server/.env`：
+```env
+DASHSCOPE_API_KEY=your-dashscope-api-key
+DASHSCOPE_MODEL=qwen-turbo
+PORT=3000
+```
+
+### 3. 启动后端服务
+
+```bash
+cd server
+node index.js
+```
+
+服务将在 http://localhost:3000 启动
+
+### 4. 启动前端
 
 ```bash
 npm run dev
 ```
 
-访问 http://localhost:3000
+访问 http://localhost:5173
 
-**移动端调试**：
-- 使用浏览器开发者工具的 Device Mode
-- 推荐尺寸：iPhone 12/13/14 Pro (390x844)
-- 或在真实移动设备上访问局域网 IP
+### 测试账号
+- **用户名**: `admin` 或 `user`
+- **密码**: 任意密码
 
-### 构建生产版本
+## 核心功能
 
-```bash
-npm run build
-```
+### 1. AI 聊天陪伴
 
-### 预览生产构建
+在「疗心舍」中，AI 不是冰冷的问答机器，而是一个温暖、安全的陪伴者。
 
-```bash
-npm run preview
-```
+- **流式响应**：文字逐字显现，像手写信一样缓缓展开
+- **情绪感知**：自动识别用户情绪，调整回应方式
+- **安全感卡片**：当检测到用户情绪低落时，自动展示温暖的自我肯定语句
+- **五感着陆练习**：当检测到用户焦虑时，引导进行 5-4-3-2-1 接地练习
+- **等待计时器**：帮助用户度过想要冲动联系他人的时刻
 
-### 代码检查
+### 2. 安全感卡片 (SecurityCard)
 
-```bash
-# ESLint 检查
-npm run lint
-
-# ESLint 自动修复
-npm run lint:fix
-
-# Prettier 格式化
-npm run format
-
-# TypeScript 类型检查
-npm run type-check
-```
-
-## 📁 目录结构
+莫兰迪色系的温暖卡片，点击即可获得一句自我肯定的话语。
 
 ```
-vue3-business-admin/
+"我值得被爱，也值得拥有美好的一切"
+"此刻，我安全了"
+"我接纳此刻的自己"
+```
+
+### 3. 五感着陆练习 (GroundingFiveSenses)
+
+基于 5-4-3-2-1 接地技术，帮助用户通过感官回归当下：
+
+- 视觉：说出 5 样看到的东西
+- 触觉：触摸 4 样东西
+- 听觉：倾听 3 种声音
+- 嗅觉：嗅闻 2 种气味
+- 味觉：品尝 1 样东西
+
+### 4. 20 分钟等待计时器 (WaitingTimer)
+
+圆形倒计时，帮助用户阻断想要立刻发消息的冲动。配合极缓慢的呼吸动画和温暖的话语：
+
+> "这段时间，你的焦虑在照顾你。但也请你照顾一下它。"
+
+## 目录结构
+
+```
 ├── src/
-│   ├── api/                    # API 接口模块
+│   ├── api/                    # API 接口
+│   │   ├── ai.ts              # AI 聊天接口
 │   │   ├── user.ts            # 用户接口
-│   │   ├── order.ts           # 订单接口
-│   │   └── ai.ts              # AI 聊天接口（新增）
+│   │   └── order.ts           # 订单接口
+│   ├── components/            # 公共组件
 │   ├── layouts/               # 布局组件
-│   │   ├── MainLayout.vue     # 主布局（移动端底部导航）
+│   │   ├── MainLayout.vue     # 主布局
 │   │   └── LoginLayout.vue    # 登录布局
 │   ├── router/                # 路由配置
-│   │   └── index.ts           # 路由守卫、动态路由
 │   ├── stores/                # Pinia 状态管理
+│   │   ├── aiChat.ts          # AI 聊天状态
 │   │   ├── user.ts            # 用户状态
-│   │   ├── global.ts          # 全局状态
-│   │   └── aiChat.ts          # AI 聊天状态（新增）
-│   ├── types/                 # TypeScript 类型定义
-│   │   ├── index.ts           # 全局类型
-│   │   └── ai.ts              # AI 类型（新增）
+│   │   └── global.ts          # 全局状态
+│   ├── types/                 # TypeScript 类型
 │   ├── utils/                 # 工具函数
-│   │   ├── request.ts         # Axios 封装
-│   │   ├── storage.ts         # 存储工具
-│   │   └── time.ts            # 时间工具
 │   ├── views/                 # 业务页面
-│   │   ├── ai/                # AI 聊天（新增）
-│   │   │   └── AIChatView.vue
-│   │   ├── dashboard/         # 首页（移动端适配）
-│   │   ├── order/             # 订单管理（移动端适配）
+│   │   ├── ai/               # AI 聊天模块
+│   │   │   ├── AIChatView.vue         # 主聊天页面
+│   │   │   ├── SecurityCard.vue       # 安全感卡片
+│   │   │   ├── GroundingFiveSenses.vue # 五感练习
+│   │   │   ├── WaitingTimer.vue       # 等待计时器
+│   │   │   └── components/
+│   │   │       ├── WarmCard.vue       # 温暖卡片
+│   │   │       └── BreathingGuide.vue # 呼吸引导
+│   │   ├── dashboard/         # 首页
+│   │   ├── order/             # 订单管理
 │   │   └── user/              # 用户管理
-│   │       ├── LoginView.vue  # 登录页（移动端适配）
-│   │       └── UserListView.vue
 │   ├── App.vue
 │   ├── main.ts
-│   └── style.css              # 全局样式（移动端优化）
-├── .env.development           # 开发环境变量
-├── .env.production            # 生产环境变量
-├── tailwind.config.js         # Tailwind 配置（移动端断点）
-├── vite.config.ts             # Vite 配置
-├── tsconfig.json              # TypeScript 配置
-└── README.md
+│   └── style.css              # 全局样式
+├── server/                    # 后端服务
+│   ├── index.js               # Express 服务器
+│   └── package.json
+├── supabase/                  # Supabase 配置
+│   └── schema.sql             # 数据库 schema
+├── .env.example               # 环境变量模板
+└── tailwind.config.js         # Tailwind 配置
 ```
 
-## 🔧 核心功能
+## 设计原则
 
-### 1. 移动端适配改造
+### 1. 视觉克制
 
-#### 响应式断点（tailwind.config.js）
-```javascript
-screens: {
-  'xs': '360px',    // 小屏手机（Android 常见）
-  'sm': '414px',    // 大屏手机（iPhone Plus/Max）
-  'md': '768px',    // 平板
-  'lg': '1024px',   // 小屏桌面
-  'xl': '1280px',   // 中屏桌面
-  '2xl': '1536px',  // 大屏桌面
+- 不使用强烈的阴影，改用极细分割线
+- 不使用高饱和度颜色，改用低饱和度莫兰迪色系
+- 卡片使用半透明材质感底色
+
+### 2. 动画静谧
+
+所有动画都遵循「暗房显影」原则：
+
+```css
+/* 暗房显影动画 */
+@keyframes photo-dev-in {
+  0% { opacity: 0; filter: brightness(0.6) blur(2px); }
+  100% { opacity: 1; filter: brightness(1) blur(0); }
 }
 ```
 
-#### 视口配置（index.html）
-```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-```
+动画时长：800ms - 1200ms（缓慢）
+缓动函数：ease-out（不急促）
 
-#### 移动端优化特性
-- **底部导航栏**：仅在移动端显示（< md 断点）
-- **卡片式列表**：订单列表改为卡片布局
-- **触摸反馈**：所有按钮添加 `active:scale` 效果
-- **安全区域**：iOS 刘海屏适配（safe-area-inset）
-- **防误触**：最小点击区域 44px
+### 3. 文字呼吸感
 
-### 2. AI 聊天功能（新增）
+- 行距：1.9（电影字幕般舒展）
+- 字间距：0.02em - 0.05em（克制的呼吸感）
+- 标题和正文保持适当对比度
 
-#### 环境配置
-在 `.env.development` 或 `.env.production` 中添加：
+## 环境配置
+
+### 开发环境
 
 ```env
-# AI Configuration
-VITE_AI_API_KEY=your-api-key-here
-VITE_AI_BASE_URL=https://api.openai.com/v1
-VITE_AI_MODEL=gpt-3.5-turbo
+VITE_DASHSCOPE_API_KEY=your-api-key
+VITE_DASHSCOPE_MODEL=qwen-turbo
+VITE_BACKEND_API_URL=http://localhost:3000
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-#### 核心文件
-- **类型定义**: `src/types/ai.ts`
-- **状态管理**: `src/stores/aiChat.ts`
-- **API 模块**: `src/api/ai.ts`
-- **聊天页面**: `src/views/ai/AIChatView.vue`
+### 生产环境
 
-#### 功能特性
-- ✅ 聊天气泡界面（用户右对齐，AI 左对齐）
-- ✅ 流式响应模拟（打字机效果）
-- ✅ 聊天记录本地存储（localStorage）
-- ✅ 新建对话/清空记录
-- ✅ 加载状态指示器
-- ✅ 错误处理与友好提示
+在 Vercel/Railway/Render 等平台设置相同的环境变量。
 
-#### 使用方式
-1. 登录后点击底部导航的 "AI 助手" 图标
-2. 在输入框输入消息，按回车或点击发送按钮
-3. AI 会自动回复（当前为模拟响应）
-4. 点击右上角菜单可新建对话或清空记录
+## 获取 API Key
 
-**注意**：当前使用 `mockChatWithAI()` 模拟 AI 响应。要使用真实 AI 服务：
-1. 配置后端 API 代理
-2. 在 `src/api/ai.ts` 中替换为实际的 `chatWithAI()` 调用
-3. 设置正确的 API Key 和 Base URL
+### 阿里云 DashScope
+1. 访问 https://dashscope.console.aliyun.com/apiKey
+2. 创建 API Key
+3. 选择模型：qwen-turbo（速度快）或 qwen-plus（效果更好）
 
-### 3. Axios 请求封装
+### Supabase (可选)
+1. 访问 https://supabase.com/dashboard
+2. 创建新项目
+3. 在 Settings > API 获取 URL 和 anon key
 
-**请求拦截器**:
-- ✅ 自动从 Pinia 获取 token 并添加到请求头
-- ✅ 统一设置 Content-Type
-- ✅ 取消重复请求
-- ✅ 全局 Loading 状态
+## 浏览器支持
 
-**响应拦截器**:
-- ✅ 统一解析返回格式 `{ code, msg, data }`
-- ✅ 成功响应只返回 data
-- ✅ 错误处理：401/403/404/500
-- ✅ 10 秒超时配置
-
-### 4. Pinia 状态管理
-
-**用户状态** (`src/stores/user.ts`):
-- `token`: 登录令牌
-- `userInfo`: 用户信息
-- `login()`: 登录方法（支持模拟登录）
-- `logout()`: 退出登录
-
-**全局状态** (`src/stores/global.ts`):
-- `loading`: 全局加载状态
-- `theme`: 主题设置
-- `collapsed`: 侧边栏折叠状态
-
-**AI 聊天状态** (`src/stores/aiChat.ts`):
-- `sessions`: 聊天会话列表
-- `currentSessionId`: 当前会话 ID
-- `isLoading`: 加载状态
-- `addUserMessage()`: 添加用户消息
-- `addAIMessage()`: 添加 AI 消息
-- `clearAllChats()`: 清空聊天记录
-
-## 🔐 登录说明
-
-### 测试账号（本地开发）
-当前项目使用**模拟登录**，无需真实后端即可测试：
-
-- **用户名**: `admin` 或 `user`
-- **密码**: 任意密码（例如：`123456`）
-
-### 登录逻辑
-- **本地开发**: `src/api/user.ts` 中的 `loginApi()` 使用模拟数据
-- **生产环境**: 取消注释真实 API 调用，配置后端接口地址
-
-### 对接真实后端
-如果要对接真实后端，需要：
-
-1. 在 `.env.development` 中配置正确的 `VITE_API_BASE_URL`
-2. 在 `src/api/user.ts` 中：
-   ```typescript
-   // 删除模拟逻辑，使用真实 API 调用
-   export async function loginApi(params: LoginParams): Promise<LoginResponse> {
-     return request.post<LoginResponse>('/api/user/login', params)
-   }
-   ```
-3. 确保后端返回格式：`{ code: 200, msg: 'success', data: { token, userInfo } }`
-
-## 🌐 环境配置
-
-### 开发环境 (`.env.development`)
-
-```env
-NODE_ENV=development
-VITE_APP_TITLE=Business Admin - Dev
-VITE_API_BASE_URL=http://dev-api.xxx.com
-VITE_PORT=3000
-
-# AI Configuration
-VITE_AI_API_KEY=your-api-key-here
-VITE_AI_BASE_URL=https://api.openai.com/v1
-VITE_AI_MODEL=gpt-3.5-turbo
-```
-
-### 生产环境 (`.env.production`)
-
-```env
-NODE_ENV=production
-VITE_APP_TITLE=Business Admin
-VITE_API_BASE_URL=https://api.xxx.com
-
-# AI Configuration
-VITE_AI_API_KEY=your-production-api-key-here
-VITE_AI_BASE_URL=https://api.openai.com/v1
-VITE_AI_MODEL=gpt-3.5-turbo
-```
-
-## 📱 移动端测试说明
-
-### 浏览器调试
-1. 打开 Chrome DevTools (F12)
-2. 点击 Device Toolbar (Ctrl+Shift+M)
-3. 选择设备：
-   - iPhone 12/13/14 Pro (390x844)
-   - iPhone 14 Pro Max (430x932)
-   - Samsung Galaxy S20 (360x800)
-   - iPad Mini (768x1024)
-
-### 真机测试
-1. 确保手机和电脑在同一局域网
-2. 运行 `npm run dev`
-3. 在手机浏览器访问 `http://[你的IP]:3000`
-4. 查看网络面板中的设备列表获取 IP
-
-### 测试要点
-- [ ] 底部导航正常显示和切换
-- [ ] 所有页面内容完整显示无溢出
-- [ ] 输入框获取焦点时键盘正常弹出
-- [ ] 按钮点击区域足够大（≥44px）
-- [ ] 长列表滚动流畅
-- [ ] AI 聊天页面消息气泡正确对齐
-
-## 📄 浏览器支持
-
-### 移动端
-- iOS Safari >= 14
-- Android Chrome >= 90
-- Samsung Internet >= 14
-
-### 桌面端
 - Chrome >= 90
 - Firefox >= 88
 - Safari >= 14
 - Edge >= 90
+- iOS Safari >= 14
+- Android Chrome >= 90
 
-## 🔧 定制指南
+## 致谢
 
-### 修改主题色
-编辑 `tailwind.config.js` 中的 `colors` 配置：
+「疗心舍」的设计理念从「暗房显影」和「电影字幕」中汲取灵感，感谢所有让这个世界变得更温暖的人和事。
 
-```javascript
-colors: {
-  primary: {
-    DEFAULT: '#165DFF',  // 主色
-    // ...
-  },
-}
-```
-
-### 添加新页面
-1. 在 `src/views/` 创建新组件
-2. 在 `src/router/index.ts` 添加路由
-3. 在 `src/layouts/MainLayout.vue` 添加导航项
-
-### 集成真实 AI 服务
-1. 安装依赖：已安装 `ai` 和 `@ai-sdk/openai`
-2. 配置环境变量
-3. 在 `src/api/ai.ts` 中实现真实 API 调用
-4. 考虑使用 Vercel AI SDK 的 `useChat` hook 实现流式响应
-
-## 📖 最佳实践
-
-1. **移动端优先**: 先写移动端样式，再用 `md:` `lg:` 适配桌面
-2. **触摸优化**: 所有交互元素保持 ≥44px 点击区域
-3. **性能优化**: 图片懒加载，列表虚拟化（长列表）
-4. **类型安全**: 避免使用 any，定义清晰的 TypeScript 接口
-5. **状态持久化**: 重要数据使用 localStorage 持久化
-
-## 🤝 贡献指南
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📜 许可证
+## 许可证
 
 MIT License
