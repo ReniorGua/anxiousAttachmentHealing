@@ -1,0 +1,274 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   视觉基调：关切与注视
+   - 极细分割线，低饱和度材质感底色
+   - 电影字幕般克制的文字排版
+   - 暗房显影般的缓慢淡入淡出
+   ============================================ */
+
+/* Photo Development Animation - 暗房显影动画 */
+@keyframes photo-dev-in {
+  0% {
+    opacity: 0;
+    filter: brightness(0.6) blur(2px);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+  }
+}
+
+@keyframes photo-dev-out {
+  0% {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(0.6) blur(2px);
+  }
+}
+
+/* 缓慢淡入淡出 - 替代弹跳动画 */
+.fade-slow {
+  animation: photo-dev-in 800ms ease-out forwards;
+}
+
+.fade-slow-leave {
+  animation: photo-dev-out 600ms ease-in forwards;
+}
+
+/* Vue Transition Classes */
+.photo-dev-enter-active {
+  animation: photo-dev-in 1200ms ease-out forwards;
+}
+
+.photo-dev-leave-active {
+  animation: photo-dev-out 800ms ease-in forwards;
+}
+
+.photo-dev-enter-from,
+.photo-dev-leave-to {
+  opacity: 0;
+  filter: brightness(0.7) blur(1px);
+}
+
+/* Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--theme-bg);
+  color: var(--theme-text);
+  /* 电影字幕般克制的行距 */
+  line-height: 1.9;
+  letter-spacing: 0.02em;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* 统一文字排版 - 电影字幕质感 */
+h1, h2, h3, h4, h5, h6,
+p, li, span, div,
+input, textarea, button, label {
+  line-height: 1.9 !important;
+  letter-spacing: 0.02em;
+}
+
+/* 标题稍微紧凑 */
+h1, h2, h3 {
+  line-height: 1.6 !important;
+  letter-spacing: 0.03em;
+}
+
+/* 细化分割线替代边框 */
+.divider-fine {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.divider-fine-soft {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+/* 材质感底色 - 低饱和度 */
+.bg-material {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.bg-material-warm {
+  background-color: rgba(0, 0, 0, 0.015);
+  background-image: linear-gradient(180deg, rgba(0,0,0,0.02) 0%, transparent 100%);
+}
+
+/* Custom Scrollbar - 极细 */
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* Utility Classes - 去除边框阴影，改用材质感 */
+@layer components {
+  .btn-primary {
+    background-color: var(--theme-primary);
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 400;
+    padding: 0.625rem 1.25rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: all 600ms ease;
+    letter-spacing: 0.05em;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--theme-primary-hover);
+    opacity: 0.9;
+  }
+
+  .btn-secondary {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: var(--theme-text);
+    font-weight: 400;
+    padding: 0.625rem 1.25rem;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 600ms ease;
+    letter-spacing: 0.05em;
+  }
+
+  .btn-secondary:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .btn-warning {
+    background-color: rgba(255, 125, 0, 0.1);
+    color: #B86E00;
+    font-weight: 400;
+    padding: 0.625rem 1.25rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 125, 0, 0.15);
+    transition: all 600ms ease;
+    letter-spacing: 0.05em;
+  }
+
+  .input-base {
+    width: 100%;
+    padding: 0.75rem 0;
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 0;
+    transition: all 600ms ease;
+    font-size: 1rem;
+    background: transparent;
+  }
+
+  .input-base:focus {
+    outline: none;
+    border-bottom-color: var(--theme-primary);
+    background: rgba(0, 0, 0, 0.01);
+  }
+
+  /* 卡片底色替代阴影卡片 */
+  .card-base {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    padding: 1.25rem;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+  }
+
+  .table-base {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .table-base th {
+    background: rgba(0, 0, 0, 0.02);
+    text-align: left;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: rgba(0, 0, 0, 0.5);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .table-base td {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    font-size: 0.875rem;
+  }
+
+  .table-base tr:hover td {
+    background: rgba(0, 0, 0, 0.01);
+  }
+}
+
+/* Mobile Optimizations */
+@media (max-width: 414px) {
+  button,
+  input,
+  select,
+  textarea,
+  a {
+    min-height: 44px;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* 移除所有快速弹跳效果 */
+* {
+  transition-timing-function: ease-out !important;
+}
+
+/* 特定元素的过渡 */
+button, a, input, textarea, select {
+  transition-duration: 400ms !important;
+}

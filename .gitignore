@@ -1,0 +1,53 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+coverage
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment files - NEVER commit these
+.env
+.env.development
+.env.production
+.env.local
+.env.*.local
+
+# Server environment files
+server/.env
+server/.env.development
+server/.env.production
+server/.env.local
+
+# AI chat documentation files (generated during development)
+AI_CHAT_*.md
+FIXES*.md
+MOCK_API.md
+QUICKSTART_AI.md
+SETUP_AI.md
+TROUBLESHOOTING_AI.md
+
+# Claude Code memory directory
+.claude/
+
+# Build output
+dist/
+dist-ssr/
