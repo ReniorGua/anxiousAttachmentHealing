@@ -6,7 +6,7 @@
   "description": "Vue3 + Vite + TypeScript Business Admin Template",
   "scripts": {
     "dev": "vite",
-    "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\"",
+    "dev:all": "concurrently \"cd server && npm run dev\" \"npm run dev\"",
     "dev:server": "cd server && npm run dev",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",

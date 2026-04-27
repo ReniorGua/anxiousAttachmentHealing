@@ -139,17 +139,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch, onMounted, computed } from 'vue'
+import { ref, nextTick, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useGlobalStore } from '@/stores/global'
+import { useUserMemoryStore } from '@/stores/userMemory'
 import { streamChatWithAI, chatWithAI } from '@/api/ai'
 import SecurityCard from './SecurityCard.vue'
 import GroundingFiveSenses from './GroundingFiveSenses.vue'
 import WaitingTimer from './WaitingTimer.vue'
+import { startMemoryService } from '@/services/memoryService'
 import type { HealingComponentType } from '@/types/ai'
 
 const aiChatStore = useAIChatStore()
 const globalStore = useGlobalStore()
+const userMemoryStore = useUserMemoryStore()
 
 // Refs
 const inputRef = ref<HTMLTextAreaElement | null>(null)
@@ -226,21 +229,39 @@ const handleStreamingResponse = async (userMessage: string) => {
       scrollToBottomImmediate()
     }
     console.log('[Chat] Stream complete, content length:', fullContent.length)
-  } catch (error) {
-    console.error('[Chat] Stream error, falling back to non-streaming:', error)
+  } catch (error: any) {
+    // Check if this is a rate limit error
+    const isRateLimit = error?.message?.includes('429') ||
+      error?.message?.includes('情绪已经释放得足够多了') ||
+      error?.status === 429
 
-    try {
-      console.log('[Chat] Attempting fallback to chatWithAI...')
-      const response = await chatWithAI({
-        message: userMessage,
-        sessionId: aiChatStore.currentSessionId || undefined,
-        stream: false,
-      })
-      fullContent = response.content || ''
-      console.log('[Chat] Fallback response length:', fullContent.length, 'First 50 chars:', fullContent.substring(0, 50))
-    } catch (fallbackError) {
-      console.error('[Chat] Fallback also failed:', fallbackError)
-      fullContent = '抱歉，服务暂时不可用，请稍后再试。'
+    console.error('[Chat] Stream error:', error)
+
+    if (isRateLimit) {
+      // Don't fallback for rate limit - show the friendly message
+      fullContent = error?.response?.data?.message || error?.message || '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。'
+    } else {
+      // Try non-streaming fallback for other errors
+      try {
+        console.log('[Chat] Attempting fallback to chatWithAI...')
+        const response = await chatWithAI({
+          message: userMessage,
+          sessionId: aiChatStore.currentSessionId || undefined,
+          stream: false,
+        })
+        fullContent = response.content || ''
+        console.log('[Chat] Fallback response length:', fullContent.length, 'First 50 chars:', fullContent.substring(0, 50))
+      } catch (fallbackError: any) {
+        const isFallbackRateLimit = fallbackError?.message?.includes('429') ||
+          fallbackError?.message?.includes('情绪已经释放得足够多了') ||
+          fallbackError?.status === 429
+        console.error('[Chat] Fallback also failed:', fallbackError)
+        if (isFallbackRateLimit) {
+          fullContent = fallbackError?.response?.data?.message || fallbackError?.message || '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。'
+        } else {
+          fullContent = '抱歉，服务暂时不可用，请稍后再试。'
+        }
+      }
     }
   }
 
@@ -287,6 +308,15 @@ const handleSubmit = async () => {
       aiChatStore.addHealingComponent(aiMessage.id, healingComponent)
     }
 
+    // Update user memory - record the user's message as a potential trouble
+    userMemoryStore.addTrouble(message)
+
+    // Check if user showed positive progress (keywords in AI response)
+    const progressKeywords = ['做得很好', '你进步了', '我为你骄傲', '你很勇敢', '相信自己', 'peace', '平静', '好起来了']
+    if (progressKeywords.some(kw => content.includes(kw))) {
+      userMemoryStore.addMilestone(message, 'self_soothing')
+    }
+
     streamingContent.value = ''
     isStreaming.value = false
 
@@ -297,24 +327,57 @@ const handleSubmit = async () => {
   }
 }
 
+// 长效记忆大脑
+let stopMemoryService: (() => void) | null = null
+
 // Initialize
 onMounted(async () => {
-  aiChatStore.loadFromStorage()
+  userMemoryStore.loadFromStorage()
+  // 静默拉取云端记忆（不阻塞 UI，不显示 loading）
+  userMemoryStore.syncFromSupabase()
+  await aiChatStore.loadFromStorage()
 
   if (!aiChatStore.currentSessionId) {
     aiChatStore.createSession()
   }
 
   await nextTick()
-  if (inputRef.value) {
-    inputRef.value.focus()
-  }
-  scrollToBottomImmediate()
+
+  // Use requestAnimationFrame to ensure browser has painted before scrolling
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      }
+      if (inputRef.value) {
+        inputRef.value.focus()
+      }
+    })
+  })
+
+  // 启动长效记忆大脑
+  stopMemoryService = startMemoryService()
 })
 
-// Watch messages
+onUnmounted(() => {
+  if (stopMemoryService) {
+    stopMemoryService()
+    stopMemoryService = null
+  }
+})
+
+// Watch messages - scroll to bottom when messages change
 watch(() => messages.value.length, () => {
-  scrollToBottomImmediate()
+  nextTick(() => scrollToBottomImmediate())
+}, { deep: true })
+
+// Also watch for the actual messages array to handle reload from storage
+watch(() => aiChatStore.sessions, () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
+  })
 }, { deep: true })
 </script>
 

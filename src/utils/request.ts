@@ -46,9 +46,9 @@ class RequestWrapper {
         const userStore = useUserStore()
         const globalStore = useGlobalStore()
 
-        // Add token to request header
-        if (userStore.token) {
-          config.headers.Authorization = `Bearer ${userStore.token}`
+        // Add anonymous UID to request header for anonymous identity
+        if (userStore.anonymousUid) {
+          config.headers['X-Anonymous-UID'] = userStore.anonymousUid
         }
 
         // Ensure Content-Type is set
@@ -176,19 +176,8 @@ class RequestWrapper {
    * Handle unauthorized access (401)
    */
   private handleUnauthorized() {
-    const userStore = useUserStore()
-    
-    // Clear token and user info
-    userStore.logout().finally(() => {
-      // Redirect to login page
-      router.push({
-        path: '/login',
-        query: { redirect: router.currentRoute.value.fullPath },
-      })
-      
-      // Show message
-      this.showMessage('登录已过期，请重新登录', 'warning')
-    })
+    // Anonymous system - no login to refresh, just show message
+    this.showMessage('会话已过期，请刷新页面', 'warning')
   }
 
   /**
@@ -197,7 +186,7 @@ class RequestWrapper {
   private handleError(code: number, msg: string) {
     switch (code) {
       case 401:
-        this.handleUnauthorized()
+        this.showMessage('会话已过期', 'warning')
         break
       case 403:
         this.showMessage('暂无操作权限', 'error')

@@ -1,15 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { useGlobalStore } from './stores/global'
-
-const route = useRoute()
-const globalStore = useGlobalStore()
-
-// Show global loading when needed
-const isLoading = computed(() => globalStore.loading)
-</script>
-
 <template>
   <div class="app-container">
     <!-- Global Loading Overlay - 缓慢显影 -->
@@ -26,10 +14,86 @@ const isLoading = computed(() => globalStore.loading)
       </div>
     </transition>
 
-    <!-- Router View -->
-    <router-view />
+    <!-- Access Gate - 访问暗号拦截 -->
+    <AccessGate v-if="!isAccessVerified" @verified="onAccessVerified" />
+
+    <template v-else>
+      <!-- Cinematic Splash Screen -->
+      <SplashScreen v-if="showSplash" @complete="onSplashComplete" />
+
+      <!-- Router View - only mount after splash completes, ensures onMounted fires at right time -->
+      <router-view v-if="!showSplash" />
+    </template>
   </div>
 </template>
+
+<script setup lang="ts">
+import { computed, ref, onMounted } from 'vue'
+import { useGlobalStore } from './stores/global'
+import { isSupabaseConfigured } from './supabase'
+import { useUserStore } from './stores/user'
+import { supabase } from './supabase'
+import SplashScreen from './components/SplashScreen.vue'
+import AccessGate from './components/AccessGate.vue'
+
+const globalStore = useGlobalStore()
+
+// Show global loading when needed
+const isLoading = computed(() => globalStore.loading)
+
+// Access gate state - verified if code matches or if no code is configured
+const ACCESS_CODE = import.meta.env.VITE_ACCESS_CODE || ''
+const isAccessVerified = ref(!ACCESS_CODE)
+
+// Splash screen state
+const showSplash = ref(true)
+
+async function checkAccessVerification() {
+  if (!ACCESS_CODE) {
+    isAccessVerified.value = true
+    return
+  }
+
+  // Try Supabase first
+  if (isSupabaseConfigured()) {
+    const userStore = useUserStore()
+    const uid = userStore.anonymousUid
+
+    if (uid) {
+      try {
+        const { data } = await supabase
+          .from('access_verification')
+          .select('verified')
+          .eq('anonymous_uid', uid)
+          .single()
+
+        if (data?.verified) {
+          localStorage.setItem('access_verified', '1')
+          isAccessVerified.value = true
+          return
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    }
+  }
+
+  // Fallback to localStorage
+  isAccessVerified.value = localStorage.getItem('access_verified') === '1'
+}
+
+onMounted(() => {
+  checkAccessVerification()
+})
+
+function onAccessVerified() {
+  isAccessVerified.value = true
+}
+
+function onSplashComplete() {
+  showSplash.value = false
+}
+</script>
 
 <style>
 .app-container {

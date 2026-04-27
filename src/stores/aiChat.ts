@@ -2,15 +2,20 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { ChatMessage, ChatSession, SpecialType, HealingComponentType } from '@/types/ai'
 import { supabase, isSupabaseConfigured, type Database } from '@/supabase'
+import { useUserStore } from './user'
 
 type ChatSessionRow = Database['public']['Tables']['chat_sessions']['Row']
 type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row']
 
 /**
- * Generate unique ID
+ * Generate unique ID (UUID v4)
  */
 const generateId = (): string => {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
 }
 
 /**
@@ -66,6 +71,12 @@ export const useAIChatStore = defineStore('aiChat', () => {
     console.log('[AI Chat Store] Supabase available:', isSupabaseAvailable.value)
   }
 
+  // Get anonymous UID
+  const getAnonymousUid = (): string => {
+    const userStore = useUserStore()
+    return userStore.anonymousUid || 'anonymous'
+  }
+
   // =====================================================
   // Supabase Operations
   // =====================================================
@@ -83,6 +94,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
       const { data, error: sbError } = await supabase
         .from('chat_sessions')
         .select('*')
+        .eq('anonymous_uid', getAnonymousUid())
         .eq('is_deleted', false)
         .order('updated_at', { ascending: false })
         .limit(50)
@@ -111,6 +123,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
         .from('chat_messages')
         .select('*')
         .eq('session_id', sessionId)
+        .eq('anonymous_uid', getAnonymousUid())
         .eq('is_deleted', false)
         .order('created_at', { ascending: true })
 
@@ -138,6 +151,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
         .from('chat_sessions')
         .upsert({
           id: session.id,
+          anonymous_uid: getAnonymousUid(),
           title: session.title,
           created_at: new Date(session.createdAt).toISOString(),
           updated_at: new Date(session.updatedAt).toISOString(),
@@ -169,6 +183,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
         .upsert({
           id: message.id,
           session_id: sessionId,
+          anonymous_uid: getAnonymousUid(),
           role: message.role,
           content: message.content,
           status: message.status,

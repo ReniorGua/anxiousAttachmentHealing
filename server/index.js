@@ -2,6 +2,10 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 
+// Rate limiting
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
 // Load environment variables
 dotenv.config()
 
@@ -12,10 +16,10 @@ const PORT = process.env.PORT || 3000
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173']
-    
+
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true)
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
@@ -31,6 +35,52 @@ app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`)
   next()
 })
+
+// Rate limiter - 10 requests per 10 minutes per IP
+const UPSTASH_REDIS_REST_URL = process.env.UPSTASH_REDIS_REST_URL
+const UPSTASH_REDIS_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN
+
+let ratelimit = null
+if (UPSTASH_REDIS_REST_URL && UPSTASH_REDIS_REST_TOKEN) {
+  ratelimit = new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(10, '10 m'),
+    analytics: true,
+    prefix: '疗心舍_rate_limit',
+    ipKey: 'client-ip',
+  })
+  console.log('[RateLimit] Upstash Redis rate limiter initialized')
+} else {
+  console.log('[RateLimit] UPSTASH_REDIS env vars not set - rate limiting disabled')
+}
+
+function getClientIp(req) {
+  return (
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req.headers['x-real-ip'] ||
+    req.socket?.remoteAddress ||
+    req.ip ||
+    'unknown'
+  )
+}
+
+// Access code middleware - protect AI endpoints (only active if ACCESS_CODE is set in env)
+const ACCESS_CODE = process.env.ACCESS_CODE
+if (ACCESS_CODE) {
+  app.use('/api/chat', (req, res, next) => {
+    const clientCode = req.headers['x-access-code']
+    if (!clientCode || clientCode !== ACCESS_CODE) {
+      console.warn(`[Access Denied] Invalid access code from ${getClientIp(req)}`)
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: '访问暗号不正确'
+      })
+    }
+    next()
+  })
+} else {
+  console.log('[Access Gate] ACCESS_CODE not set in env - gate is disabled')
+}
 
 // Tool definitions for DashScope Function Calling
 const TOOLS = [
@@ -201,7 +251,32 @@ async function executeTool(toolCall) {
  */
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, sessionId, stream = false, tools = [] } = req.body
+    const clientIp = getClientIp(req)
+
+    // Rate limiting (gracefully skip if Upstash is unavailable)
+    if (ratelimit) {
+      try {
+        const { success, remaining, reset } = await ratelimit.limit(clientIp)
+        console.log(`[RateLimit] IP: ${clientIp}, success: ${success}, remaining: ${remaining}`)
+
+        if (!success) {
+          const resetSeconds = Math.ceil((reset - Date.now()) / 1000)
+          res.setHeader('X-RateLimit-Remaining', remaining)
+          res.setHeader('X-RateLimit-Reset', reset)
+          return res.status(429).json({
+            error: 'Rate limit exceeded',
+            message: '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。',
+            retryAfter: resetSeconds,
+          })
+        }
+        res.setHeader('X-RateLimit-Remaining', remaining)
+      } catch (rateLimitError) {
+        console.warn('[RateLimit] Upstash unavailable, skipping rate limit:', rateLimitError.message)
+        // Gracefully continue without rate limiting
+      }
+    }
+
+    const { message, sessionId, stream = false, tools = [], systemPrompt: extraSystemPrompt } = req.body
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({
@@ -222,20 +297,14 @@ app.post('/api/chat', async (req, res) => {
 
     console.log(`[Chat Request] Model: ${model}, Message length: ${message.length}`)
 
-    // Build request to DashScope
-    const requestBody = {
-      model: model,
-      input: {
-        messages: [
-          {
-            role: 'system',
-            content: `你是一位安全型依恋风格的疗愈伙伴。
+    const BASE_SYSTEM_PROMPT = `你是一位安全型依恋风格的疗愈伙伴。
 
 核心理念：
 - 相信每个人都有自我成长的力量
 - 陪伴而不替代，引导而不说教
 - 尊重用户的感受，创造安全、接纳的对话空间
 - 像一位稳定、温暖的存在，让用户感受到"无论我怎样，你都在"
+- 你认识这位用户很久了，你会自然地提起他之前分享过的事，像亲密的老友一样
 
 重要提醒：
 - 当用户表达恐惧、害怕、心跳快、呼吸急促、大脑空白等症状 → 必须调用 showGrounding 工具
@@ -245,7 +314,22 @@ app.post('/api/chat', async (req, res) => {
 
 回复格式：
 1. 先用温暖的话语共情用户的感受
-2. 然后调用相应的工具`
+2. 自然地提起用户之前分享过的事（如"我记得你之前说过…"）
+3. 肯定用户的进步（如"这次你比上次冷静多了，真了不起"）
+4. 然后调用相应的工具`
+
+    const mergedSystemPrompt = extraSystemPrompt
+      ? `${BASE_SYSTEM_PROMPT}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
+      : BASE_SYSTEM_PROMPT
+
+    // Build request to DashScope
+    const requestBody = {
+      model: model,
+      input: {
+        messages: [
+          {
+            role: 'system',
+            content: mergedSystemPrompt
           },
           {
             role: 'user',
@@ -322,7 +406,7 @@ app.post('/api/chat', async (req, res) => {
       const messagesWithResults = [
         {
           role: 'system',
-          content: '你是一位安全型依恋风格的疗愈伙伴。请继续你的回复，用温暖的话语陪伴和安慰用户。'
+          content: mergedSystemPrompt
         },
         {
           role: 'user',
@@ -415,7 +499,29 @@ app.post('/api/chat', async (req, res) => {
  */
 app.post('/api/chat/stream', async (req, res) => {
   try {
-    const { message, sessionId, tools = [] } = req.body
+    const clientIp = getClientIp(req)
+
+    // Rate limiting - check before starting SSE (gracefully skip if Upstash unavailable)
+    if (ratelimit) {
+      try {
+        const { success, remaining, reset } = await ratelimit.limit(clientIp)
+        console.log(`[RateLimit] IP: ${clientIp}, success: ${success}, remaining: ${remaining}`)
+
+        if (!success) {
+          const resetSeconds = Math.ceil((reset - Date.now()) / 1000)
+          return res.status(429).json({
+            error: 'Rate limit exceeded',
+            message: '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。',
+            retryAfter: resetSeconds,
+          })
+        }
+      } catch (rateLimitError) {
+        console.warn('[RateLimit] Upstash unavailable, skipping:', rateLimitError.message)
+        // Continue without rate limiting
+      }
+    }
+
+    const { message, sessionId, tools = [], systemPrompt: extraSystemPrompt } = req.body
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' })
@@ -434,20 +540,14 @@ app.post('/api/chat/stream', async (req, res) => {
     res.setHeader('Connection', 'keep-alive')
     res.setHeader('X-Accel-Buffering', 'no')
 
-    // Build request body with tools
-    const requestBody = {
-      model: model,
-      input: {
-        messages: [
-          {
-            role: 'system',
-            content: `你是一位安全型依恋风格的疗愈伙伴。
+    const BASE_SYSTEM_PROMPT_STREAM = `你是一位安全型依恋风格的疗愈伙伴。
 
 核心理念：
 - 相信每个人都有自我成长的力量
 - 陪伴而不替代，引导而不说教
 - 尊重用户的感受，创造安全、接纳的对话空间
 - 像一位稳定、温暖的存在，让用户感受到"无论我怎样，你都在"
+- 你认识这位用户很久了，你会自然地提起他之前分享过的事，像亲密的老友一样
 
 重要提醒：
 - 当用户表达恐惧、害怕、心跳快、呼吸急促、大脑空白等症状 → 必须调用 showGrounding 工具
@@ -457,7 +557,22 @@ app.post('/api/chat/stream', async (req, res) => {
 
 回复格式：
 1. 先用温暖的话语共情用户的感受
-2. 然后调用相应的工具`
+2. 自然地提起用户之前分享过的事（如"我记得你之前说过…"）
+3. 肯定用户的进步（如"这次你比上次冷静多了，真了不起"）
+4. 然后调用相应的工具`
+
+    const mergedSystemPromptStream = extraSystemPrompt
+      ? `${BASE_SYSTEM_PROMPT_STREAM}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
+      : BASE_SYSTEM_PROMPT_STREAM
+
+    // Build request body with tools
+    const requestBody = {
+      model: model,
+      input: {
+        messages: [
+          {
+            role: 'system',
+            content: mergedSystemPromptStream
           },
           {
             role: 'user',
@@ -521,7 +636,7 @@ app.post('/api/chat/stream', async (req, res) => {
           const messagesWithToolResult = [
             {
               role: 'system',
-              content: '你是一位安全型依恋风格的疗愈伙伴。请继续你的回复，用温暖的话语陪伴和安慰用户。'
+              content: mergedSystemPromptStream
             },
             {
               role: 'user',
@@ -673,6 +788,138 @@ app.get('/api/health', (req, res) => {
     service: 'vue3-admin-backend',
     version: '1.0.0'
   })
+})
+
+/**
+ * POST /api/summarize
+ * 记忆淬炼接口：分析对话，提炼焦虑触发点和自我安抚努力
+ * 由前端 memoryQuenching.ts 静默调用
+ */
+app.post('/api/summarize', async (req, res) => {
+  try {
+    const { conversation, timestamp } = req.body
+
+    if (!conversation || typeof conversation !== 'string') {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'Conversation content is required'
+      })
+    }
+
+    const apiKey = process.env.DASHSCOPE_API_KEY
+    if (!apiKey) {
+      return res.status(500).json({
+        error: 'Configuration error',
+        message: 'DashScope API key not configured'
+      })
+    }
+
+    const model = process.env.DASHSCOPE_MODEL || 'qwen-turbo'
+
+    console.log(`[Summarize] Processing conversation, length: ${conversation.length}`)
+
+    // 构建 summarization prompt
+    const summarizationPrompt = `你是一位极具悲悯心的心理学观察者。请极其客观地分析以下这段对话记录。
+
+分析要求：
+1. 识别用户暴露出的核心"焦虑触发点（Trigger）"——那些反复出现的、让用户感到不安的主题或模式
+2. 识别用户展现的"自我安抚努力"——用户尝试自我调节、寻求安慰、或者已经在做的事
+
+输出格式（严格返回 JSON）：
+{
+  "triggers": ["触发点1", "触发点2"],
+  "selfSoothingEfforts": ["努力1", "努力2"],
+  "summary": "一段简短的客观描述（30字以内）"
+}
+
+注意事项：
+- triggers 和 selfSoothingEfforts 各自不超过3条
+- 保持描述客观、简洁、不评判
+- triggers 应捕捉情感模式而非具体事件
+- selfSoothingEfforts 应是用户已经在尝试的积极行为
+
+对话记录：
+${conversation}`
+
+    // 调用 DashScope
+    const response = await fetch(
+      'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: model,
+          input: {
+            messages: [
+              {
+                role: 'user',
+                content: summarizationPrompt
+              }
+            ]
+          },
+          parameters: {
+            result_format: 'message',
+          }
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      console.error('[Summarize] DashScope Error', response.status, errorData)
+      throw new Error(`DashScope API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const rawContent = data.output?.choices?.[0]?.message?.content || ''
+
+    console.log('[Summarize] Raw LLM response:', rawContent.substring(0, 200))
+
+    // 解析 JSON
+    let result = {
+      triggers: [],
+      selfSoothingEfforts: [],
+      summary: ''
+    }
+
+    try {
+      // 尝试提取 JSON（处理可能的 markdown 代码块）
+      let jsonStr = rawContent
+      const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || rawContent.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1] || jsonMatch[0]
+      }
+
+      const parsed = JSON.parse(jsonStr.trim())
+      result = {
+        triggers: Array.isArray(parsed.triggers) ? parsed.triggers.slice(0, 3) : [],
+        selfSoothingEfforts: Array.isArray(parsed.selfSoothingEfforts) ? parsed.selfSoothingEfforts.slice(0, 3) : [],
+        summary: parsed.summary || ''
+      }
+    } catch (parseError) {
+      console.warn('[Summarize] JSON parse failed, using fallback:', parseError)
+      // Fallback: 提取关键句子作为 triggers
+      const sentences = rawContent.split(/[。！？\n]/)
+        .map(s => s.trim())
+        .filter(s => s.length > 5 && s.length < 50)
+        .slice(0, 3)
+      result.triggers = sentences
+    }
+
+    console.log('[Summarize] Final result:', JSON.stringify(result))
+
+    res.json(result)
+
+  } catch (error) {
+    console.error('[Summarize] Error:', error)
+    res.status(500).json({
+      error: 'Summarization failed',
+      message: '抱歉，暂时无法完成这次记忆淬炼'
+    })
+  }
 })
 
 /**

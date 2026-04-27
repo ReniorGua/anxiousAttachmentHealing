@@ -45,7 +45,7 @@ export interface Database {
       chat_sessions: {
         Row: {
           id: string
-          user_id: string | null
+          anonymous_uid: string
           title: string
           created_at: string
           updated_at: string
@@ -53,7 +53,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id?: string | null
+          anonymous_uid: string
           title?: string
           created_at?: string
           updated_at?: string
@@ -61,7 +61,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string | null
+          anonymous_uid?: string
           title?: string
           created_at?: string
           updated_at?: string
@@ -72,6 +72,7 @@ export interface Database {
         Row: {
           id: string
           session_id: string
+          anonymous_uid: string
           role: 'user' | 'assistant' | 'system'
           content: string
           status: 'sending' | 'sent' | 'error' | 'streaming' | null
@@ -85,6 +86,7 @@ export interface Database {
         Insert: {
           id?: string
           session_id: string
+          anonymous_uid: string
           role: 'user' | 'assistant' | 'system'
           content?: string
           status?: 'sending' | 'sent' | 'error' | 'streaming' | null
@@ -98,6 +100,7 @@ export interface Database {
         Update: {
           id?: string
           session_id?: string
+          anonymous_uid?: string
           role?: 'user' | 'assistant' | 'system'
           content?: string
           status?: 'sending' | 'sent' | 'error' | 'streaming' | null
@@ -109,11 +112,67 @@ export interface Database {
           is_deleted?: boolean
         }
       }
+      user_memory: {
+        Row: {
+          id: string
+          anonymous_uid: string
+          memory_type: 'trigger' | 'strength' | 'trouble' | 'milestone'
+          content: string
+          timestamp: number
+          metadata: Record<string, any>
+          created_at: string
+          updated_at: string
+          is_deleted: boolean
+        }
+        Insert: {
+          id: string
+          anonymous_uid: string
+          memory_type: 'trigger' | 'strength' | 'trouble' | 'milestone'
+          content: string
+          timestamp: number
+          metadata?: Record<string, any>
+          is_deleted?: boolean
+        }
+        Update: {
+          id?: string
+          anonymous_uid?: string
+          memory_type?: 'trigger' | 'strength' | 'trouble' | 'milestone'
+          content?: string
+          timestamp?: number
+          metadata?: Record<string, any>
+          is_deleted?: boolean
+        }
+      }
+      access_verification: {
+        Row: {
+          anonymous_uid: string
+          verified: boolean
+          verified_at: string
+        }
+        Insert: {
+          anonymous_uid: string
+          verified?: boolean
+          verified_at?: string
+        }
+        Update: {
+          anonymous_uid?: string
+          verified?: boolean
+          verified_at?: string
+        }
+      }
     }
   }
 }
 
 // Helper function to check if Supabase is configured
 export const isSupabaseConfigured = (): boolean => {
-  return !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://placeholder.supabase.co')
+  const url = supabaseUrl?.trim()
+  const key = supabaseAnonKey?.trim()
+  if (!url || !key) return false
+  // Check for placeholder/invalid values
+  const placeholderDomains = ['your-project.supabase.co', 'placeholder.supabase.co', 'your-']
+  const isPlaceholderUrl = placeholderDomains.some(d => url.includes(d))
+  const isPlaceholderKey = key.includes('your-') || key.includes('placeholder') || key.length < 20
+  if (isPlaceholderUrl || isPlaceholderKey) return false
+  return true
 }

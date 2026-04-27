@@ -12,25 +12,11 @@ declare module 'vue-router' {
 
 // Layout components
 const MainLayout = () => import('@/layouts/MainLayout.vue')
-const LoginLayout = () => import('@/layouts/LoginLayout.vue')
 
 /**
  * Static Routes - Always accessible
  */
 const staticRoutes: RouteRecordRaw[] = [
-  {
-    path: '/login',
-    name: 'Login',
-    component: LoginLayout,
-    children: [
-      {
-        path: '',
-        name: 'LoginPage',
-        component: () => import('@/views/user/LoginView.vue'),
-        meta: { title: '登录' },
-      },
-    ],
-  },
   {
     path: '/404',
     name: 'NotFound',
@@ -44,7 +30,7 @@ const staticRoutes: RouteRecordRaw[] = [
 ]
 
 /**
- * Dynamic Routes - Require authentication
+ * Dynamic Routes
  */
 export const dynamicRoutes: RouteRecordRaw[] = [
   {
@@ -57,7 +43,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         path: 'chat',
         name: 'AIChat',
         component: () => import('@/views/ai/AIChatView.vue'),
-        meta: { title: '疗心舍', requiresAuth: true },
+        meta: { title: '疗心舍' },
       },
     ],
   },

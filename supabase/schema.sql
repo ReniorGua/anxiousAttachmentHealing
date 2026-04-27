@@ -13,7 +13,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =====================================================
 CREATE TABLE IF NOT EXISTS chat_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID,  -- NULL for anonymous users
+    anonymous_uid TEXT NOT NULL,  -- 关联匿名用户身份
     title TEXT NOT NULL DEFAULT '新对话',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
 );
 
 -- Index for faster queries
-CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_anonymous_uid ON chat_sessions(anonymous_uid) WHERE is_deleted = FALSE;
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated_at ON chat_sessions(updated_at DESC);
 
 -- =====================================================
@@ -31,6 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated_at ON chat_sessions(updated
 CREATE TABLE IF NOT EXISTS chat_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    anonymous_uid TEXT NOT NULL,  -- 关联匿名用户身份
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
     content TEXT NOT NULL DEFAULT '',
     status TEXT DEFAULT 'sent' CHECK (status IN ('sending', 'sent', 'error', 'streaming')),
@@ -68,22 +69,19 @@ CREATE POLICY "Users can insert their own sessions"
 CREATE POLICY "Users can view their own sessions"
     ON chat_sessions FOR SELECT
     TO authenticated, anon
-    USING (
-        -- Allow if user_id matches, or if user_id is NULL (anonymous)
-        user_id IS NULL
-    );
+    USING (anonymous_uid IS NOT NULL);
 
 -- Policy: Users can update their own sessions
 CREATE POLICY "Users can update their own sessions"
     ON chat_sessions FOR UPDATE
     TO authenticated, anon
-    USING (user_id IS NULL);
+    USING (anonymous_uid IS NOT NULL);
 
 -- Policy: Users can delete their own sessions
 CREATE POLICY "Users can delete their own sessions"
     ON chat_sessions FOR DELETE
     TO authenticated, anon
-    USING (user_id IS NULL);
+    USING (anonymous_uid IS NOT NULL);
 
 
 -- Policy: Users can insert their own messages
@@ -96,37 +94,19 @@ CREATE POLICY "Users can insert their own messages"
 CREATE POLICY "Users can view messages in their own sessions"
     ON chat_messages FOR SELECT
     TO authenticated, anon
-    USING (
-        EXISTS (
-            SELECT 1 FROM chat_sessions
-            WHERE id = chat_messages.session_id
-            AND chat_sessions.user_id IS NULL
-        )
-    );
+    USING (anonymous_uid IS NOT NULL);
 
 -- Policy: Users can update their own messages
 CREATE POLICY "Users can update their own messages"
     ON chat_messages FOR UPDATE
     TO authenticated, anon
-    USING (
-        EXISTS (
-            SELECT 1 FROM chat_sessions
-            WHERE id = chat_messages.session_id
-            AND chat_sessions.user_id IS NULL
-        )
-    );
+    USING (anonymous_uid IS NOT NULL);
 
 -- Policy: Users can delete their own messages
 CREATE POLICY "Users can delete their own messages"
     ON chat_messages FOR DELETE
     TO authenticated, anon
-    USING (
-        EXISTS (
-            SELECT 1 FROM chat_sessions
-            WHERE id = chat_messages.session_id
-            AND chat_sessions.user_id IS NULL
-        )
-    );
+    USING (anonymous_uid IS NOT NULL);
 
 
 -- =====================================================
@@ -170,6 +150,59 @@ CREATE TRIGGER update_chat_messages_updated_at
 -- For now, we'll use polling or manual refresh
 -- See: https://supabase.com/docs/guides/realtime
 
+
+-- =====================================================
+-- Table: user_memory
+-- Stores user's long-term memory (triggers, strengths, troubles, milestones)
+-- Associated with anonymous_uid so users don't need to log in
+-- =====================================================
+CREATE TABLE IF NOT EXISTS user_memory (
+    id TEXT PRIMARY KEY,  -- Same ID as localStorage for stable upsert
+    anonymous_uid TEXT NOT NULL,
+    memory_type TEXT NOT NULL CHECK (memory_type IN ('trigger', 'strength', 'trouble', 'milestone')),
+    content TEXT NOT NULL,
+    timestamp BIGINT NOT NULL,  -- Unix timestamp in ms
+    metadata JSONB DEFAULT '{}',  -- Stores type-specific fields (category, resolved, etc.)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    is_deleted BOOLEAN DEFAULT FALSE
+);
+
+-- Index for fast queries by user
+CREATE INDEX IF NOT EXISTS idx_user_memory_anonymous_uid ON user_memory(anonymous_uid) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_user_memory_type ON user_memory(anonymous_uid, memory_type) WHERE is_deleted = FALSE;
+
+-- =====================================================
+-- Row Level Security for user_memory
+-- =====================================================
+
+ALTER TABLE user_memory ENABLE ROW LEVEL SECURITY;
+
+-- Allow anonymous and authenticated users to manage their own memory
+CREATE POLICY "Users can manage their own memory"
+    ON user_memory FOR ALL
+    TO authenticated, anon
+    USING (anonymous_uid IS NOT NULL)
+    WITH CHECK (anonymous_uid IS NOT NULL);
+
+-- =====================================================
+-- Table: access_verification
+-- Stores anonymous user's access code verification state
+-- So users don't need to re-enter code after cache clearing
+-- =====================================================
+CREATE TABLE IF NOT EXISTS access_verification (
+    anonymous_uid TEXT PRIMARY KEY,
+    verified BOOLEAN DEFAULT TRUE,
+    verified_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE access_verification ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own verification"
+    ON access_verification FOR ALL
+    TO authenticated, anon
+    USING (anonymous_uid IS NOT NULL)
+    WITH CHECK (anonymous_uid IS NOT NULL);
 
 -- =====================================================
 -- Sample Data (Optional - for testing)

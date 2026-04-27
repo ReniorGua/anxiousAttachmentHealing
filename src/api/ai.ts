@@ -1,6 +1,7 @@
 import type { ChatMessage } from '@/types/ai'
 import { simulateNetworkDelay } from '@/utils/mock'
 import { useGlobalStore } from '@/stores/global'
+import { useUserMemoryStore } from '@/stores/userMemory'
 
 export type ColorScheme = 'calm' | 'warm' | 'fresh' | 'serene' | 'natural' | 'default'
 
@@ -71,6 +72,12 @@ export interface AIChatResponse {
  * Backend API URL from environment
  */
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3000'
+
+/**
+ * Access code from environment
+ * Sent in header for server-side verification
+ */
+const ACCESS_CODE = import.meta.env.VITE_ACCESS_CODE || ''
 
 /**
  * Enable real AI backend or use mock
@@ -187,6 +194,11 @@ export function analyzeMessage(message: string): string {
  */
 export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> {
   const globalStore = useGlobalStore()
+  const userMemoryStore = useUserMemoryStore()
+
+  // Read memory context from localStorage and format as system prompt
+  userMemoryStore.loadFromStorage()
+  const memoryContext = userMemoryStore.getContextSummary()
 
   // If real AI is disabled, use mock
   if (!ENABLE_REAL_AI) {
@@ -211,15 +223,18 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
       message: params.message.substring(0, 50) + '...',
       sessionId: params.sessionId,
       stream: params.stream,
+      hasMemoryContext: !!memoryContext,
     })
 
     const response = await fetch(`${BACKEND_API_URL}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(ACCESS_CODE ? { 'X-Access-Code': ACCESS_CODE } : {}),
       },
       body: JSON.stringify({
         message: params.message,
+        systemPrompt: memoryContext,
         sessionId: params.sessionId,
         stream: params.stream || false,
       }),
@@ -230,7 +245,7 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
       console.error('[AI API Error]', response.status, errorData)
 
       if (response.status === 401) {
-        throw new Error('API 密钥无效，请联系管理员检查配置')
+        throw new Error('访问暗号不正确，请刷新页面重新验证')
       }
 
       if (response.status === 429) {
@@ -309,6 +324,11 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
  */
 export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<string, void, unknown> {
   const globalStore = useGlobalStore()
+  const userMemoryStore = useUserMemoryStore()
+
+  // Read memory context from localStorage
+  userMemoryStore.loadFromStorage()
+  const memoryContext = userMemoryStore.getContextSummary()
 
   if (!ENABLE_REAL_AI) {
     // Mock streaming for demo
@@ -329,9 +349,11 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(ACCESS_CODE ? { 'X-Access-Code': ACCESS_CODE } : {}),
       },
       body: JSON.stringify({
         message: params.message,
+        systemPrompt: memoryContext,
         sessionId: params.sessionId,
       }),
     })
