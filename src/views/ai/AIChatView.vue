@@ -330,6 +330,14 @@ const handleStreamingResponse = async (userMessage: string) => {
   try {
     console.log('[Chat] Starting stream...')
     for await (const chunk of streamChatWithAI({ message: userMessage, sessionId: aiChatStore.currentSessionId || undefined })) {
+      // ===== 新增开始：处理清空信号 =====
+      if (chunk === '[CLEAR_CONTENT]') {
+        fullContent = ''
+        streamingContent.value = ''
+        console.log('[Chat] 收到清空信号，重置对话流')
+        continue
+      }
+      // ===== 新增结束 =====
       fullContent += chunk
       console.log('[Chat] streamingContent updated, chunk length:', chunk.length, 'fullContent length:', fullContent.length)
       streamingContent.value = fullContent
@@ -385,6 +393,9 @@ const handleStreamingResponse = async (userMessage: string) => {
   const triggeredComponent = (window as any).__lastHealingComponent as HealingComponentType | undefined
   if (triggeredComponent) {
     console.log('[Chat] Using triggeredComponent:', triggeredComponent)
+    // ===== 新增开始：将获取到的组件赋值给函数的返回变量 =====
+    healingComponent = triggeredComponent 
+    // ===== 新增结束 =====
     delete (window as any).__lastHealingComponent
     // 如果疗愈组件被触发，保留流式内容（AI正在引导用户进行练习）
     // 不要清空 fullContent！
