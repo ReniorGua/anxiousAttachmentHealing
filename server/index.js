@@ -640,9 +640,6 @@ app.post('/api/chat', async (req, res) => {
         }
       )
 
-      let finalContent = ''
-      let firstContent = data.output?.choices?.[0]?.message?.content || ''
-
       // Log second response status for debugging
       console.log('[Chat] Second response status:', secondResponse.status)
       console.log('[Chat] Messages sent to second call:', JSON.stringify(messagesForSecondCall, null, 2))
