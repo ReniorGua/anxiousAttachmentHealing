@@ -106,6 +106,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
+import { audioGroundingEngine } from '@/services/audioService'
+
+const emit = defineEmits<{
+  complete: [{ completed: boolean }]
+}>()
 
 /**
  * WaitingTimer - 等待倒计时器
@@ -179,6 +184,11 @@ const startTimer = () => {
   breathingInterval = setInterval(() => {
     isBreathingIn.value = !isBreathingIn.value
   }, 8000)
+
+  // 开启低频着陆音频 - 比心跳略慢的 50 BPM，通过听觉引导降低生理唤醒
+  console.log('[WaitingTimer] Starting audio...')
+  audioGroundingEngine.setTempo(50)
+  audioGroundingEngine.startGrounding()
 }
 
 const pauseTimer = () => {
@@ -193,6 +203,9 @@ const pauseTimer = () => {
     clearInterval(breathingInterval)
     breathingInterval = null
   }
+
+  // 暂停时降低音频音量但不关闭
+  audioGroundingEngine.stopGrounding()
 }
 
 const resetTimer = () => {
@@ -206,12 +219,17 @@ const resetTimer = () => {
 const completeTimer = () => {
   pauseTimer()
   isCompleted.value = true
+  // 完成时平滑关闭音频
+  audioGroundingEngine.stopGrounding()
+  // 通知父组件练习完成
+  emit('complete', { completed: true })
 }
 
 // 组件卸载时清理
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval)
   if (breathingInterval) clearInterval(breathingInterval)
+  audioGroundingEngine.stopGrounding()
 })
 </script>
 

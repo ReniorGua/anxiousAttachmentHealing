@@ -6,7 +6,7 @@ export type MessageStatus = 'sending' | 'sent' | 'error' | 'streaming'
 
 export type SpecialType = 'depression' | 'anxiety' | 'stress' | 'anger' | 'fear' | 'tired' | 'lonely' | 'sadness' | null
 
-export type HealingComponentType = 'securityCard' | 'grounding' | 'waitingTimer' | null
+export type HealingComponentType = 'securityCard' | 'grounding' | 'waitingTimer' | 'breathing478' | 'energyRetraction' | 'somaticRadar' | 'innerChild' | null
 
 export interface ChatMessage {
   id: string

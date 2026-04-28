@@ -240,6 +240,8 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
       }),
     })
 
+    console.log('[Real AI] Non-streaming response status:', response.status)
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       console.error('[AI API Error]', response.status, errorData)
@@ -257,9 +259,12 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
 
     const data = await response.json()
 
+    console.log('[Real AI] Full response data:', JSON.stringify(data).substring(0, 500))
     console.log('[Real AI] Response received:', {
       messageId: data.messageId,
-      contentLength: data.content.length,
+      contentLength: data.content ? data.content.length : 0,
+      contentPreview: data.content ? data.content.substring(0, 100) : 'EMPTY',
+      toolCalls: data.toolCalls,
       usage: data.usage,
     })
 
@@ -283,8 +288,13 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
           }
         }
 
-        // Handle new healing component tools
-        if ((toolCall.toolName === 'showSecurityCard' || toolCall.toolName === 'showGrounding' || toolCall.toolName === 'showWaitingTimer') && toolCall.result?.success) {
+        // Handle ALL healing component tools (new and legacy names)
+        const healingToolNames = [
+          'showSecurityCard', 'showGrounding', 'showWaitingTimer',
+          'trigger_478_breathing', 'trigger_energy_retraction',
+          'trigger_somatic_radar', 'trigger_inner_child', 'trigger_security_card'
+        ]
+        if (healingToolNames.includes(toolCall.toolName) && toolCall.result?.success) {
           const result = toolCall.result as any
           if (result.component) {
             window.__lastHealingComponent = result.component
@@ -400,7 +410,7 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
             console.log('[Stream AI] Raw data:', data.substring(0, 50) + '...')
 
             if (data === '[DONE]') {
-              console.log('[Stream AI] Stream completed')
+              console.log('[Stream AI] Stream completed with [DONE]')
               return
             }
 
@@ -413,7 +423,15 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
               // Check for tool call result from backend (after tool execution)
               if (parsed.tool_call_result) {
                 const result = parsed.tool_call_result
-                console.log('[Stream AI] Tool call result from backend:', result)
+                console.log('[Stream AI] Tool call result from backend:', JSON.stringify(result))
+                console.log('[Stream AI] Setting __lastHealingComponent to:', result.component)
+
+                // CRITICAL: Clear accumulated content when tool call result is received
+                // The content sent before the tool call was just the AI's acknowledgment before calling the tool
+                // The real response will come AFTER this in the stream, so we clear both buffers
+                fullContent = ''
+                // Note: streamingContent cannot be cleared here because it's a ref in the component,
+                // but the component will handle clearing it when the stream ends
 
                 if (result.success) {
                   // Handle apply_healing_atmosphere result
@@ -426,7 +444,7 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
                   if (result.component) {
                     // Store the component type for the UI to render
                     window.__lastHealingComponent = result.component
-                    console.log('[Stream AI] Healing component detected:', result.component)
+                    console.log('[Stream AI] Healing component stored in window:', result.component)
                   }
 
                   // Handle emotion result
@@ -465,12 +483,38 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
               }
 
               if (content) {
-                console.log('[Stream AI] Yielding content:', content.substring(0, 30) + '...')
-                yield content
+                // Safety check: if content contains tool_call_result JSON, strip it
+                // The JSON can appear anywhere in content if AI included it in response
+                if (content.includes('"tool_call_result"')) {
+                  console.log('[Stream AI] Content contains tool_call_result JSON, stripping it')
+                  // Match the full JSON object even if it spans multiple lines
+                  content = content.replace(/\{[\s\S]*?"tool_call_result"[\s\S]*?\}/g, '').trim()
+                  // Also handle case where it appears as standalone line
+                  content = content.replace(/^[\s]*\{\s*"tool_call_result"[^}]*\}[\s]*$/gm, '').trim()
+                }
+                if (content) {
+                  console.log('[Stream AI] Yielding content:', JSON.stringify(content).substring(0, 100))
+                  yield content
+                }
               }
             } catch (e) {
               // Try to yield as plain text if not JSON
-              console.warn('[Stream AI] Failed to parse JSON, using as text:', data.substring(0, 30))
+              console.warn('[Stream AI] Failed to parse JSON, using as text:', data.substring(0, 100))
+              // But first check if it's actually a tool_call_result that we should handle
+              try {
+                const parsedErr = JSON.parse(data)
+                if (parsedErr?.tool_call_result) {
+                  console.log('[Stream AI] tool_call_result in catch block, handling it')
+                  const result = parsedErr.tool_call_result
+                  fullContent = '' // Clear any accumulated content
+                  if (result.component) {
+                    window.__lastHealingComponent = result.component
+                  }
+                  continue
+                }
+              } catch (e2) {
+                // Not JSON or not tool_call_result, yield as plain text
+              }
               if (data && data !== '[DONE]') {
                 yield data
               }
@@ -481,6 +525,7 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
     } finally {
       reader.releaseLock()
       console.log('[Stream AI] Reader released')
+      console.log('[Stream AI] Final __lastHealingComponent:', (window as any).__lastHealingComponent)
     }
   } catch (error) {
     console.error('[Stream AI Error]', error)

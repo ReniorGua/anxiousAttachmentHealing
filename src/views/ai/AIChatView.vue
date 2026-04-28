@@ -2,10 +2,30 @@
   <div class="flex flex-col h-full" style="background-color: #FAFAF8;">
     <!-- Header -->
     <header
-      class="flex items-center justify-center px-4 py-5 flex-shrink-0"
+      class="flex items-center justify-between px-5 py-5 flex-shrink-0"
       :style="{ backgroundColor: globalStore.customThemeColor || '#8FA98F' }"
     >
+      <!-- Spacer for balance -->
+      <div class="w-8"></div>
+
       <h1 class="text-base font-light text-white tracking-widest opacity-90">疗心舍</h1>
+
+      <!-- Global Audio Toggle - 放在右侧 -->
+      <button
+        @click="toggleAudio"
+        class="w-8 h-8 flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity"
+        :title="isAudioEnabled ? '关闭声音' : '开启声音'"
+      >
+        <!-- 开启状态图标 -->
+        <svg v-if="isAudioEnabled" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+        </svg>
+        <!-- 静音状态图标 -->
+        <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+        </svg>
+      </button>
     </header>
 
     <!-- Chat Messages Area -->
@@ -47,9 +67,37 @@
             <!-- Healing Component - 缓慢显影效果 -->
             <Transition name="photo-dev">
               <div v-if="message.healingComponent" class="mt-5 max-w-[80%]">
-                <SecurityCard v-if="message.healingComponent === 'securityCard'" />
-                <GroundingFiveSenses v-if="message.healingComponent === 'grounding'" />
-                <WaitingTimer v-if="message.healingComponent === 'waitingTimer'" />
+                <SecurityCard
+                  v-if="message.healingComponent === 'securityCard'"
+                  @complete="onHealingComplete(message.id, $event)"
+                />
+                <GroundingFiveSenses
+                  v-if="message.healingComponent === 'grounding'"
+                  @complete="onHealingComplete(message.id, $event)"
+                />
+                <WaitingTimer
+                  v-if="message.healingComponent === 'waitingTimer'"
+                  @complete="onHealingComplete(message.id, $event)"
+                />
+                <BreathingGuide
+                  v-if="message.healingComponent === 'breathing478'"
+                  mode="478"
+                  @complete="onHealingComplete(message.id, $event)"
+                />
+                <EnergyRetraction
+                  v-if="message.healingComponent === 'energyRetraction'"
+                  @complete="onHealingComplete(message.id, $event)"
+                />
+                <SomaticRadar
+                  v-if="message.healingComponent === 'somaticRadar'"
+                  @complete="onHealingComplete(message.id, $event)"
+                />
+                <Transition name="fade-in-slow">
+                  <InnerChild
+                    v-if="message.healingComponent === 'innerChild'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
               </div>
             </Transition>
           </div>
@@ -147,7 +195,12 @@ import { streamChatWithAI, chatWithAI } from '@/api/ai'
 import SecurityCard from './SecurityCard.vue'
 import GroundingFiveSenses from './GroundingFiveSenses.vue'
 import WaitingTimer from './WaitingTimer.vue'
+import BreathingGuide from './components/BreathingGuide.vue'
+import EnergyRetraction from './components/EnergyRetraction.vue'
+import SomaticRadar from './components/SomaticRadar.vue'
+import InnerChild from './components/InnerChild.vue'
 import { startMemoryService } from '@/services/memoryService'
+import { audioGroundingEngine } from '@/services/audioService'
 import type { HealingComponentType } from '@/types/ai'
 
 const aiChatStore = useAIChatStore()
@@ -163,6 +216,7 @@ const inputMessage = ref('')
 const isStreaming = ref(false)
 const streamingContent = ref('')
 const currentStreamingMessageId = ref<string | null>(null)
+const isAudioEnabled = ref(false)
 
 // Get messages from store
 const messages = computed(() => aiChatStore.currentMessages)
@@ -194,21 +248,73 @@ const scrollToBottomImmediate = () => {
 }
 
 /**
+ * Toggle global audio (mute/unmute)
+ * 点击静音图标时立即停止所有音频，并阻止新音频播放
+ */
+const toggleAudio = () => {
+  isAudioEnabled.value = !isAudioEnabled.value
+  audioGroundingEngine.setMuted(!isAudioEnabled.value)
+}
+
+/**
+ * Handle completion of healing components
+ * 当用户在疗愈组件中点击"完成"时，记录到用户记忆系统
+ */
+const onHealingComplete = async (messageId: string, event: { completed?: boolean; heartRate?: string }) => {
+  console.log('[Chat] Healing component completed:', messageId, event)
+
+  // 获取完成的组件类型
+  const session = aiChatStore.sessions.find(s => s.id === aiChatStore.currentSessionId)
+  const msg = session?.messages.find(m => m.id === messageId)
+  const componentType = msg?.healingComponent
+
+  // 记录里程碑到用户记忆
+  if (componentType === 'breathing478') {
+    userMemoryStore.addMilestone('完成了4-7-8呼吸练习', 'self_soothing')
+  } else if (componentType === 'waitingTimer') {
+    userMemoryStore.addMilestone('成功等待了20分钟', 'self_soothing')
+  } else if (componentType === 'grounding') {
+    userMemoryStore.addMilestone('完成了五感着陆练习', 'self_soothing')
+  } else if (componentType === 'energyRetraction') {
+    userMemoryStore.addMilestone('进行了能量回收练习', 'self_soothing')
+  } else if (componentType === 'somaticRadar') {
+    userMemoryStore.addMilestone('进行了躯体觉察练习', 'self_soothing')
+  } else if (componentType === 'innerChild') {
+    userMemoryStore.addMilestone('与内在小孩对话', 'self_soothing')
+  }
+
+  console.log('[Chat] Milestone recorded for component:', componentType)
+}
+
+/**
  * Detect healing component based on user message keywords
  */
 const detectHealingComponent = (message: string): HealingComponentType => {
   const lowerMsg = message.toLowerCase()
 
-  if (/心跳|心跳快|喘不过气|呼吸急促|呼吸困难|大脑空白|惊恐|很怕|害怕/.test(lowerMsg)) {
-    return 'grounding'
+  // 4-7-8 呼吸 / 生理急症 (最高优先级)
+  if (/心跳|心跳快|喘不过气|呼吸急促|呼吸困难|大脑空白|惊恐|要疯了|崩溃|胸闷|手脚发麻/.test(lowerMsg)) {
+    return 'breathing478'
   }
 
-  if (/他爱不爱|抛弃|不值得|没价值|自我价值|不爱我|不要我了/.test(lowerMsg)) {
+  // 能量回收 / 行为冲动 (高优先级)
+  if (/不发信息会疯|忍不住|控制不住|刷手机|连环发|想去堵|查看已读|能量耗散/.test(lowerMsg)) {
+    return 'energyRetraction'
+  }
+
+  // 躯体觉察 (中优先级)
+  if (/胃部翻腾|喉咙发紧|身体紧绷|说不清为什么|难受/.test(lowerMsg)) {
+    return 'somaticRadar'
+  }
+
+  // 内在小孩 / 深度创伤 (低优先级)
+  if (/没人要|被抛弃|小时候|像个小孩|羞耻感|绝望|内在小孩/.test(lowerMsg)) {
+    return 'innerChild'
+  }
+
+  // 安全卡 / 日常温补 (最低优先级) - 扩展关键词覆盖更多情况
+  if (/他爱不爱|抛弃|不值得|没价值|自我价值|不爱我|不要我了|太敏感|是不是我|心情不好|难过|焦虑|害怕|担心|不安|孤独|寂寞|累|压力大/.test(lowerMsg)) {
     return 'securityCard'
-  }
-
-  if (/现在就找他|马上找他|不发信息会疯|忍不住|控制不住/.test(lowerMsg)) {
-    return 'waitingTimer'
   }
 
   return null
@@ -225,51 +331,63 @@ const handleStreamingResponse = async (userMessage: string) => {
     console.log('[Chat] Starting stream...')
     for await (const chunk of streamChatWithAI({ message: userMessage, sessionId: aiChatStore.currentSessionId || undefined })) {
       fullContent += chunk
+      console.log('[Chat] streamingContent updated, chunk length:', chunk.length, 'fullContent length:', fullContent.length)
       streamingContent.value = fullContent
       scrollToBottomImmediate()
     }
-    console.log('[Chat] Stream complete, content length:', fullContent.length)
+    console.log('[Chat] Stream complete, final content length:', fullContent.length, 'content preview:', fullContent.substring(0, 50))
   } catch (error: any) {
+    console.error('[Chat] Stream error:', error)
+    console.log('[Chat] Catch block: __lastHealingComponent at error time:', (window as any).__lastHealingComponent)
+
     // Check if this is a rate limit error
     const isRateLimit = error?.message?.includes('429') ||
       error?.message?.includes('情绪已经释放得足够多了') ||
       error?.status === 429
-
-    console.error('[Chat] Stream error:', error)
 
     if (isRateLimit) {
       // Don't fallback for rate limit - show the friendly message
       fullContent = error?.response?.data?.message || error?.message || '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。'
     } else {
       // Try non-streaming fallback for other errors
-      try {
-        console.log('[Chat] Attempting fallback to chatWithAI...')
-        const response = await chatWithAI({
-          message: userMessage,
-          sessionId: aiChatStore.currentSessionId || undefined,
-          stream: false,
-        })
-        fullContent = response.content || ''
-        console.log('[Chat] Fallback response length:', fullContent.length, 'First 50 chars:', fullContent.substring(0, 50))
-      } catch (fallbackError: any) {
-        const isFallbackRateLimit = fallbackError?.message?.includes('429') ||
-          fallbackError?.message?.includes('情绪已经释放得足够多了') ||
-          fallbackError?.status === 429
-        console.error('[Chat] Fallback also failed:', fallbackError)
-        if (isFallbackRateLimit) {
-          fullContent = fallbackError?.response?.data?.message || fallbackError?.message || '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。'
-        } else {
-          fullContent = '抱歉，服务暂时不可用，请稍后再试。'
+      // But only if no healing component was already triggered (avoid duplicate content)
+      const alreadyTriggeredComponent = (window as any).__lastHealingComponent
+      if (alreadyTriggeredComponent) {
+        console.log('[Chat] Skipping fallback because healing component already set:', alreadyTriggeredComponent)
+        // 不要清空 fullContent！保留流式内容，疗愈组件会单独显示
+      } else {
+        try {
+          console.log('[Chat] Attempting fallback to chatWithAI...')
+          const response = await chatWithAI({
+            message: userMessage,
+            sessionId: aiChatStore.currentSessionId || undefined,
+            stream: false,
+          })
+          fullContent = response.content || ''
+          console.log('[Chat] Fallback response length:', fullContent.length, 'First 50 chars:', fullContent.substring(0, 50))
+        } catch (fallbackError: any) {
+          const isFallbackRateLimit = fallbackError?.message?.includes('429') ||
+            fallbackError?.message?.includes('情绪已经释放得足够多了') ||
+            fallbackError?.status === 429
+          console.error('[Chat] Fallback also failed:', fallbackError)
+          if (isFallbackRateLimit) {
+            fullContent = fallbackError?.response?.data?.message || fallbackError?.message || '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。'
+          } else {
+            fullContent = '抱歉，服务暂时不可用，请稍后再试。'
+          }
         }
       }
     }
   }
 
   // Check if a healing component was triggered via tool call
+  console.log('[Chat] Checking __lastHealingComponent:', (window as any).__lastHealingComponent)
   const triggeredComponent = (window as any).__lastHealingComponent as HealingComponentType | undefined
   if (triggeredComponent) {
-    healingComponent = triggeredComponent
+    console.log('[Chat] Using triggeredComponent:', triggeredComponent)
     delete (window as any).__lastHealingComponent
+    // 如果疗愈组件被触发，保留流式内容（AI正在引导用户进行练习）
+    // 不要清空 fullContent！
   }
 
   // If no tool call triggered, check keywords
@@ -302,10 +420,19 @@ const handleSubmit = async () => {
 
     const { content, healingComponent } = await handleStreamingResponse(message)
 
+    // Check __lastHealingComponent AGAIN after streaming completes
+    // because tool_call_result may arrive after streaming ends
+    const finalHealingComponent = (window as any).__lastHealingComponent as HealingComponentType | undefined
+    if (finalHealingComponent) {
+      console.log('[Chat] Final healing component detected after stream:', finalHealingComponent)
+      delete (window as any).__lastHealingComponent
+    }
+    const effectiveHealingComponent = finalHealingComponent || healingComponent
+
     const aiMessage = await aiChatStore.addAIMessage(content)
 
-    if (healingComponent) {
-      aiChatStore.addHealingComponent(aiMessage.id, healingComponent)
+    if (effectiveHealingComponent) {
+      aiChatStore.addHealingComponent(aiMessage.id, effectiveHealingComponent)
     }
 
     // Update user memory - record the user's message as a potential trouble
@@ -411,5 +538,25 @@ watch(() => aiChatStore.sessions, () => {
 /* 消息行距 */
 p {
   line-height: 1.9 !important;
+}
+
+/* 照片显影过渡 - 用于疗愈组件 */
+.photo-dev-enter-active,
+.photo-dev-leave-active {
+  transition: opacity 1.5s ease;
+}
+.photo-dev-enter-from,
+.photo-dev-leave-to {
+  opacity: 0;
+}
+
+/* 缓慢淡入过渡 - 用于内在小孩等深度疗愈组件 */
+.fade-in-slow-enter-active,
+.fade-in-slow-leave-active {
+  transition: opacity 2s ease;
+}
+.fade-in-slow-enter-from,
+.fade-in-slow-leave-to {
+  opacity: 0;
 }
 </style>

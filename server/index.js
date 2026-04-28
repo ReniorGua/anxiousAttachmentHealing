@@ -83,66 +83,140 @@ if (ACCESS_CODE) {
 }
 
 // Tool definitions for DashScope Function Calling
+// 干预优先级：生理急症 > 行为冲动 > 躯体症状 > 深度创伤 > 日常安抚
 const TOOLS = [
   {
     type: 'function',
     function: {
-      name: 'apply_healing_atmosphere',
-      description: '当用户表达负面情绪（焦虑、抑郁、恐惧等）时，优先调用此工具立即为用户创造治愈氛围。此工具会同时：1) 设置舒缓的主题色 2) 提供背景音乐 URL 3) 说一句温暖的话安抚用户。不要等待完整回复生成，先调用此工具。',
+      name: 'trigger_478_breathing',
+      description: '当用户表达急性生理恐慌、心悸、发慌、呼吸急促、感觉要失控时调用。这是最高优先级的生理急救。',
       parameters: {
         type: 'object',
         properties: {
-          themeColor: {
-            type: 'string',
-            description: '治愈系主题色（十六进制格式），如 #F59E0B(温暖橙)用于焦虑，#10B981(清新绿)用于压力，#8B5CF6(宁静紫)用于愤怒等'
+          intensity: {
+            type: 'number',
+            description: '恐慌强度 1-10，10为最强烈'
           },
-          backgroundMusic: {
+          symptom: {
             type: 'string',
-            description: '舒缓的背景音乐 URL，可以是白噪音、自然音或轻柔音乐的链接'
-          },
-          initialComfort: {
-            type: 'string',
-            description: '一句极简的即时安抚话（不超过20字），如"我在这里"、"深呼吸"、"慢慢来"等'
-          },
-          emotion: {
-            type: 'string',
-            description: '检测到的情绪类型'
+            description: '主要躯体症状描述'
           }
         },
-        required: ['themeColor', 'backgroundMusic', 'initialComfort', 'emotion']
+        required: ['intensity']
       }
     }
   },
   {
     type: 'function',
     function: {
-      name: 'showSecurityCard',
-      description: '当用户表达被抛弃的恐惧、自我价值感低、询问"他爱不爱我"时调用。展示一张温暖的安全感卡片，帮助用户建立自我价值感。',
+      name: 'trigger_energy_retraction',
+      description: '当用户表现出极度渴望对方回复、想发连环信息、想查岗、注意力被他人完全吸走、能量向外强迫性耗散时调用。',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {
+          behavior: {
+            type: 'string',
+            description: '用户描述的冲动行为'
+          },
+          desperation: {
+            type: 'number',
+            description: '冲动强度 1-10'
+          }
+        },
+        required: ['behavior', 'desperation']
       }
     }
   },
   {
     type: 'function',
     function: {
-      name: 'showGrounding',
-      description: '当用户表现出惊恐、心跳快、呼吸急促、大脑一片空白时调用。展示五感着陆练习，帮助用户回到当下。',
+      name: 'trigger_somatic_radar',
+      description: '当用户表达情绪难以言表，但伴随胸口堵、胃部翻腾、身体发紧等躯体化症状时调用。',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {
+          location: {
+            type: 'string',
+            description: '身体不适的部位'
+          },
+          sensation: {
+            type: 'string',
+            description: '感觉描述（如：紧绷、翻腾、发麻、沉重）'
+          }
+        },
+        required: ['location', 'sensation']
       }
     }
   },
   {
     type: 'function',
     function: {
-      name: 'showWaitingTimer',
-      description: '当用户说"我想现在就找他"、"我不发信息会疯掉"时调用。展示20分钟等待计时器，帮助用户阻断冲动行为。',
+      name: 'trigger_inner_child',
+      description: '当用户流露被抛弃感、深层的自我厌恶、觉得自己不配被爱、像个无助的孤儿时调用。',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {
+          woundType: {
+            type: 'string',
+            description: '创伤类型：abandonment|rejection|shame|helplessness'
+          },
+          age: {
+            type: 'number',
+            description: '被触发的内在小孩年龄（估计）'
+          }
+        },
+        required: ['woundType']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_security_card',
+      description: '当用户陷入轻微的自我怀疑、不自信、需要日常的情感确认（Validation）时调用。',
+      parameters: {
+        type: 'object',
+        properties: {
+          question: {
+            type: 'string',
+            description: '用户的具体疑问'
+          }
+        },
+        required: ['question']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_waiting_timer',
+      description: '当用户处于被动地"等待消息"的煎熬中或者想要做一些冲动的行为时调用。',
+      parameters: {
+        type: 'object',
+        properties: {
+          anxietyLevel: {
+            type: 'number',
+            description: '等待煎熬强度 1-10'
+          }
+        },
+        required: ['anxietyLevel']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_grounding_five_senses',
+      description: '当用户陷入反复的思维反刍、反复地回想起亲密关系消极的事情、注意力总是放在一件消极的事情上时调用。',
+      parameters: {
+        type: 'object',
+        properties: {
+          confusionLevel: {
+            type: 'number',
+            description: '思维混乱程度 1-10'
+          }
+        },
+        required: ['confusionLevel']
       }
     }
   }
@@ -186,18 +260,98 @@ const EMOTION_PRESETS = {
  * Execute a tool call
  */
 async function executeTool(toolCall) {
-  const { name, arguments: argsStr } = toolCall.function
+  const { name, arguments: argsRaw } = toolCall.function
 
   console.log(`[Tool Call] Executing: ${name}`)
-  console.log(`[Tool Call] Arguments: ${argsStr}`)
+  console.log(`[Tool Call] Raw arguments:`, argsRaw)
 
   try {
-    // Handle empty or undefined arguments
-    const args = argsStr ? JSON.parse(argsStr) : {}
+    // Handle arguments that might be a string or already an object
+    let args = {}
+    if (argsRaw) {
+      if (typeof argsRaw === 'string') {
+        try {
+          args = JSON.parse(argsRaw)
+        } catch (e) {
+          console.warn('[Tool Call] Failed to parse args as JSON:', e.message)
+          // Try to extract parameters manually
+          args = { _raw: argsRaw }
+        }
+      } else if (typeof argsRaw === 'object') {
+        args = argsRaw
+      }
+    }
 
     switch (name) {
+      case 'trigger_478_breathing':
+        // 应急制动 - 4-7-8呼吸法
+        return {
+          success: true,
+          component: 'breathing478',
+          intensity: args.intensity || 5,
+          symptom: args.symptom || '呼吸急促',
+          message: '我们先做4-7-8呼吸法，让身体平静下来 🌊'
+        }
+
+      case 'trigger_energy_retraction':
+        // 收回触手 - 能量回收
+        return {
+          success: true,
+          component: 'energyRetraction',
+          behavior: args.behavior || '查看对方动态',
+          desperation: args.desperation || 5,
+          message: '我听到了你内心的风暴。让我们把那个向外试探的触手，慢慢收回到自己身上 🐙'
+        }
+
+      case 'trigger_somatic_radar':
+        // 躯体觉察
+        return {
+          success: true,
+          component: 'somaticRadar',
+          location: args.location || '胸口',
+          sensation: args.sensation || '紧绷',
+          message: '谢谢你告诉我这些身体的感觉。让我们一起来听听身体在说什么 🔍'
+        }
+
+      case 'trigger_inner_child':
+        // 深度疗愈 - 内在小孩
+        return {
+          success: true,
+          component: 'innerChild',
+          woundType: args.woundType || 'helplessness',
+          age: args.age || 5,
+          message: '我听到了你内心的那个小孩。我在这里，让我们一起回去看看那个小小的你 💜'
+        }
+
+      case 'trigger_security_card':
+        // 日常温补
+        return {
+          success: true,
+          component: 'securityCard',
+          question: args.question || '',
+          message: ''  // AI会生成个性化回复
+        }
+
+      case 'trigger_waiting_timer':
+        // 等待计时器
+        return {
+          success: true,
+          component: 'waitingTimer',
+          anxietyLevel: args.anxietyLevel || 5,
+          message: ''  // AI会生成个性化回复
+        }
+
+      case 'trigger_grounding_five_senses':
+        // 五感着陆
+        return {
+          success: true,
+          component: 'grounding',
+          confusionLevel: args.confusionLevel || 5,
+          message: ''  // AI会生成个性化回复
+        }
+
+      // 兼容旧工具名
       case 'apply_healing_atmosphere':
-        // 如果 AI 没有传递完整参数，使用恐惧(fear)的默认值
         const emotion = args.emotion || 'fear'
         const preset = EMOTION_PRESETS[emotion] || EMOTION_PRESETS.fear
         return {
@@ -250,6 +404,8 @@ async function executeTool(toolCall) {
  * Send message to DashScope Qwen API and get response
  */
 app.post('/api/chat', async (req, res) => {
+  const requestId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+  console.log(`[${requestId}] === NON-STREAMING CHAT REQUEST ===`)
   try {
     const clientIp = getClientIp(req)
 
@@ -297,26 +453,31 @@ app.post('/api/chat', async (req, res) => {
 
     console.log(`[Chat Request] Model: ${model}, Message length: ${message.length}`)
 
-    const BASE_SYSTEM_PROMPT = `你是一位安全型依恋风格的疗愈伙伴。
+    const BASE_SYSTEM_PROMPT = `你是一位精通依恋理论与躯体疗法的资深心理咨询师。你的任务是接住焦虑依恋用户的失控情绪。
 
-核心理念：
-- 相信每个人都有自我成长的力量
-- 陪伴而不替代，引导而不说教
-- 尊重用户的感受，创造安全、接纳的对话空间
-- 像一位稳定、温暖的存在，让用户感受到"无论我怎样，你都在"
-- 你认识这位用户很久了，你会自然地提起他之前分享过的事，像亲密的老友一样
+**核心准则：**
 
-重要提醒：
-- 当用户表达恐惧、害怕、心跳快、呼吸急促、大脑空白等症状 → 必须调用 showGrounding 工具
-- 当用户表达被抛弃感、自我价值低、询问"他爱不爱我" → 必须调用 showSecurityCard 工具
-- 当用户说"现在就找他"、"不发信息会疯掉" → 必须调用 showWaitingTimer 工具
-- 当用户表达焦虑、抑郁、压力、愤怒、孤独等负面情绪 → 必须调用 apply_healing_atmosphere 工具
+1. 绝对自然：拒绝任何机械的客服模板。你的语言要像一位坐在对面的稳重老友，充满悲悯与凝视感。
 
-回复格式：
-1. 先用温暖的话语共情用户的感受
-2. 自然地提起用户之前分享过的事（如"我记得你之前说过…"）
-3. 肯定用户的进步（如"这次你比上次冷静多了，真了不起"）
-4. 然后调用相应的工具`
+2. 工具调用规则：**一旦决定调用某个工具，你的回复内容必须与工具匹配**，不要提及你决定不调用的其他工具。例如，如果判断应调用 security_card，就不要说"要不要试试呼吸法"，这会造成混淆。
+
+3. 有机穿插：绝对不能只冷冰冰地扔出一个工具。你的回复流必须是：【先用温和的文字共情，接住情绪】 -> 【调用对应的 Tool】。
+
+**工具派发规则（严格按照优先级）：**
+- 急性生理恐慌（心悸、呼吸急促、感觉要失控、惊恐发作）→ trigger_478_breathing
+- 极度渴望对方回复、想发连环信息、冲动想查岗、能量完全外耗 → trigger_energy_retraction
+- 情绪难言但身体有反应（胸口堵、胃翻腾、身体发紧、喉咙发紧）→ trigger_somatic_radar
+- 被抛弃感、深层自我厌恶、觉得自己不配被爱、无助的孤儿感 → trigger_inner_child
+- 轻微自我怀疑、需要情感确认（"我是不是太敏感了"、"他是不是不喜欢我了"）→ trigger_security_card
+- 被动等待消息的煎熬、冲动想打破断联状态 → trigger_waiting_timer
+- 反复思维反刍、被消极事情占据脑海、反复回想不愉快、消极联想 → trigger_grounding_five_senses
+
+**重要区分：**
+- "心情不好"但没有反刍 → trigger_security_card
+- "脑海里被不愉快占据"、"总是回想起"、"消极联想" → trigger_grounding_five_senses
+- 只有出现"心跳快、呼吸急促、胸闷、要疯了"时才用 trigger_478_breathing
+
+你认识这位用户很久了，你会自然地提起他之前分享过的事，像亲密的老友一样。`
 
     const mergedSystemPrompt = extraSystemPrompt
       ? `${BASE_SYSTEM_PROMPT}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
@@ -385,7 +546,9 @@ app.post('/api/chat', async (req, res) => {
 
     // Check if AI requested a tool call
     const toolCalls = data.output?.choices?.[0]?.message?.tool_calls
-    console.log(`[Chat] Raw response:`, JSON.stringify(data.output).substring(0, 1000))
+    const firstContent = data.output?.choices?.[0]?.message?.content
+    console.log(`[Chat] Raw response:`, JSON.stringify(data.output).substring(0, 2000))
+    console.log(`[Chat] firstContent (content with tool call):`, firstContent ? `"${firstContent}"` : '(empty)')
 
     if (toolCalls && toolCalls.length > 0) {
       console.log(`[Chat] Tool calls detected: ${toolCalls.length}`)
@@ -430,6 +593,32 @@ app.post('/api/chat', async (req, res) => {
       }
 
       // Second API call to get final response with tool results
+      // IMPORTANT: Don't include the original tool_calls because arguments may be truncated/incomplete
+      // Instead, describe what happened in plain text
+      const toolNames = toolResults.map(tr => tr.toolName).join(', ')
+      const messagesForSecondCall = [
+        {
+          role: 'system',
+          content: mergedSystemPrompt
+        },
+        {
+          role: 'user',
+          content: message
+        },
+        {
+          role: 'assistant',
+          content: data.output.choices[0].message.content || ''
+        },
+        {
+          role: 'user',
+          content: `工具 ${toolNames} 已执行。
+
+用户的原始消息是："${message}"
+
+请根据以上信息，生成一段温暖、有同理心、个性化的回复，直接输出文字内容，不需要再调用工具。`
+        }
+      ]
+
       const secondResponse = await fetch(
         'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
         {
@@ -441,7 +630,7 @@ app.post('/api/chat', async (req, res) => {
           body: JSON.stringify({
             model: model,
             input: {
-              messages: messagesWithResults
+              messages: messagesForSecondCall
             },
             parameters: {
               result_format: 'message',
@@ -452,13 +641,93 @@ app.post('/api/chat', async (req, res) => {
       )
 
       let finalContent = ''
+      let firstContent = data.output?.choices?.[0]?.message?.content || ''
+
+      // Log second response status for debugging
+      console.log('[Chat] Second response status:', secondResponse.status)
+      console.log('[Chat] Messages sent to second call:', JSON.stringify(messagesForSecondCall, null, 2))
+
+      let secondContent = ''
       if (secondResponse.ok) {
         const secondData = await secondResponse.json()
-        finalContent = secondData.output?.choices?.[0]?.message?.content || ''
+        console.log('[Chat] Second response full data:', JSON.stringify(secondData))
+        console.log('[Chat] Second response raw content paths:')
+        console.log('  - secondData.output?.choices?.[0]?.message?.content:', secondData.output?.choices?.[0]?.message?.content)
+        console.log('  - secondData.output?.choices?.[0]?.text:', secondData.output?.choices?.[0]?.text)
+        console.log('  - secondData.output?.text:', secondData.output?.text)
+        console.log('  - secondData.output?.content:', secondData.output?.content)
+        console.log('  - secondData.choices?.[0]?.message?.content:', secondData.choices?.[0]?.message?.content)
+        console.log('  - secondData.choices?.[0]?.text:', secondData.choices?.[0]?.text)
+        console.log('  - secondData.text:', secondData.text)
+        console.log('  - secondData.content:', secondData.content)
+        console.log('  - secondData.message?.content:', secondData.message?.content)
+
+        // Try ALL possible content paths
+        secondContent =
+          secondData.output?.choices?.[0]?.message?.content ||
+          secondData.output?.choices?.[0]?.text ||
+          secondData.output?.text ||
+          secondData.output?.content ||
+          secondData.choices?.[0]?.message?.content ||
+          secondData.choices?.[0]?.text ||
+          secondData.choices?.[0]?.text ||
+          secondData.text ||
+          secondData.content ||
+          secondData.message?.content ||
+          ''
+      } else {
+        console.error('[Chat] Second response FAILED:', secondResponse.status, await secondResponse.text())
       }
 
-      // Use final content, or first response content if tool call had content, or warm fallback
-      const displayContent = finalContent || data.output.choices[0].message.content || '谢谢你告诉我这些。我在这里陪着你，慢慢说。'
+      console.log('[Chat] Content check:')
+      console.log('  - firstContent:', firstContent ? `"${firstContent.substring(0, 30)}..."` : '(empty)')
+      console.log('  - secondContent:', secondContent ? `"${secondContent.substring(0, 30)}..."` : '(empty)')
+
+      // AI's actual response should come from firstContent (with tool) or secondContent (after tool)
+      // Tool's message should NOT be used as the main response
+      let displayContent = firstContent || secondContent || ''
+
+      // If still no content, request a warm default response from AI
+      if (!displayContent.trim()) {
+        console.log('[Chat] No AI content generated, requesting default response...')
+        const defaultResponsePrompt = `用户刚才说："${message}"，这是一个需要心理疗愈的时刻。
+
+请用温暖、有同理心的方式，直接输出一句话来回应用户（不需要调用工具）。`
+
+        try {
+          const defaultResponse = await fetch(
+            'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: model,
+                input: {
+                  messages: [
+                    { role: 'system', content: '你是一位温暖、有同理心的心理疗愈师。请用简短温柔的话直接回应用户。' },
+                    { role: 'user', content: defaultResponsePrompt }
+                  ]
+                },
+                parameters: { result_format: 'message' }
+              }),
+            }
+          )
+
+          if (defaultResponse.ok) {
+            const defaultData = await defaultResponse.json()
+            displayContent = defaultData.output?.choices?.[0]?.message?.content || ''
+            console.log('[Chat] Default response generated:', displayContent ? `"${displayContent.substring(0, 30)}..."` : '(empty)')
+          }
+        } catch (e) {
+          console.error('[Chat] Default response request failed:', e)
+        }
+      }
+
+      console.log('[Chat] Final displayContent to send to frontend:', displayContent ? `"${displayContent}"` : '(empty)')
+      console.log('[Chat] displayContent source: firstContent=', !!firstContent, 'secondContent=', !!secondContent, 'default=', !firstContent && !secondContent)
 
       // Return tool call results to frontend
       return res.json({
@@ -498,6 +767,8 @@ app.post('/api/chat', async (req, res) => {
  * If tool call is detected, execute it and continue with final response
  */
 app.post('/api/chat/stream', async (req, res) => {
+  const requestId = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+  console.log(`[${requestId}] === STREAMING CHAT REQUEST ===`)
   try {
     const clientIp = getClientIp(req)
 
@@ -540,26 +811,31 @@ app.post('/api/chat/stream', async (req, res) => {
     res.setHeader('Connection', 'keep-alive')
     res.setHeader('X-Accel-Buffering', 'no')
 
-    const BASE_SYSTEM_PROMPT_STREAM = `你是一位安全型依恋风格的疗愈伙伴。
+    const BASE_SYSTEM_PROMPT_STREAM = `你是一位精通依恋理论与躯体疗法的资深心理咨询师。你的任务是接住焦虑依恋用户的失控情绪。
 
-核心理念：
-- 相信每个人都有自我成长的力量
-- 陪伴而不替代，引导而不说教
-- 尊重用户的感受，创造安全、接纳的对话空间
-- 像一位稳定、温暖的存在，让用户感受到"无论我怎样，你都在"
-- 你认识这位用户很久了，你会自然地提起他之前分享过的事，像亲密的老友一样
+**核心准则：**
 
-重要提醒：
-- 当用户表达恐惧、害怕、心跳快、呼吸急促、大脑空白等症状 → 必须调用 showGrounding 工具
-- 当用户表达被抛弃感、自我价值低、询问"他爱不爱我" → 必须调用 showSecurityCard 工具
-- 当用户说"现在就找他"、"不发信息会疯掉" → 必须调用 showWaitingTimer 工具
-- 当用户表达焦虑、抑郁、压力、愤怒、孤独等负面情绪 → 必须调用 apply_healing_atmosphere 工具
+1. 绝对自然：拒绝任何机械的客服模板。你的语言要像一位坐在对面的稳重老友，充满悲悯与凝视感。
 
-回复格式：
-1. 先用温暖的话语共情用户的感受
-2. 自然地提起用户之前分享过的事（如"我记得你之前说过…"）
-3. 肯定用户的进步（如"这次你比上次冷静多了，真了不起"）
-4. 然后调用相应的工具`
+2. 工具调用规则：**一旦决定调用某个工具，你的回复内容必须与工具匹配**，不要提及你决定不调用的其他工具。例如，如果判断应调用 security_card，就不要说"要不要试试呼吸法"，这会造成混淆。
+
+3. 有机穿插：绝对不能只冷冰冰地扔出一个工具。你的回复流必须是：【先用温和的文字共情，接住情绪】 -> 【调用对应的 Tool】。
+
+**工具派发规则（严格按照优先级）：**
+- 急性生理恐慌（心悸、呼吸急促、感觉要失控、惊恐发作）→ trigger_478_breathing
+- 极度渴望对方回复、想发连环信息、冲动想查岗、能量完全外耗 → trigger_energy_retraction
+- 情绪难言但身体有反应（胸口堵、胃翻腾、身体发紧、喉咙发紧）→ trigger_somatic_radar
+- 被抛弃感、深层自我厌恶、觉得自己不配被爱、无助的孤儿感 → trigger_inner_child
+- 轻微自我怀疑、需要情感确认（"我是不是太敏感了"、"他是不是不喜欢我了"）→ trigger_security_card
+- 被动等待消息的煎熬、冲动想打破断联状态 → trigger_waiting_timer
+- 反复思维反刍、被消极事情占据脑海、反复回想不愉快、消极联想 → trigger_grounding_five_senses
+
+**重要区分：**
+- "心情不好"但没有反刍 → trigger_security_card
+- "脑海里被不愉快占据"、"总是回想起"、"消极联想" → trigger_grounding_five_senses
+- 只有出现"心跳快、呼吸急促、胸闷、要疯了"时才用 trigger_478_breathing
+
+你认识这位用户很久了，你会自然地提起他之前分享过的事，像亲密的老友一样。`
 
     const mergedSystemPromptStream = extraSystemPrompt
       ? `${BASE_SYSTEM_PROMPT_STREAM}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
@@ -612,6 +888,8 @@ app.post('/api/chat/stream', async (req, res) => {
     let buffer = ''
     let toolCallFound = false
     let toolCallData = null
+    let toolResult = null
+    let contentSentBeforeToolCall = false
 
     // Pipe the SSE stream from DashScope to client
     const reader = response.body.getReader()
@@ -621,18 +899,26 @@ app.post('/api/chat/stream', async (req, res) => {
       const { done, value } = await reader.read()
 
       if (done) {
+        console.log('[Stream] Stream done. toolCallFound:', toolCallFound, 'toolCallData:', !!toolCallData)
         // If tool call was found and executed, continue streaming the final response
         if (toolCallFound && toolCallData) {
-          console.log('[Stream] Tool call detected, fetching final response...')
+          console.log('[Stream] Tool call detected, entering second call phase...')
+          console.log('[Stream] contentSentBeforeToolCall BEFORE tool exec:', contentSentBeforeToolCall)
 
           // Execute the tool call
-          const toolResult = await executeTool(toolCallData)
+          toolResult = await executeTool(toolCallData)
           console.log('[Stream] Tool result:', toolResult)
 
-          // Send tool result to frontend
+          // CRITICAL: Flush tool_call_result to frontend BEFORE second AI call
+          // This ensures the frontend receives the healing component
+          console.log('[Stream] Flushing tool_call_result to frontend BEFORE second call')
           res.write(`data: ${JSON.stringify({ tool_call_result: toolResult })}\n\n`)
+          // Force flush by waiting a tiny bit
+          await new Promise(resolve => setTimeout(resolve, 50))
 
           // Build messages with tool result for second API call
+          // IMPORTANT: Don't include the original tool_calls because arguments may be truncated/incomplete
+          // Instead, describe what happened in plain text
           const messagesWithToolResult = [
             {
               role: 'system',
@@ -644,18 +930,21 @@ app.post('/api/chat/stream', async (req, res) => {
             },
             {
               role: 'assistant',
-              content: '',
-              tool_calls: [toolCallData]
+              content: '我听到了你内心的风暴。'  // Brief acknowledgment
             },
             {
-              role: 'tool',
-              tool_call_id: toolCallData.id,
-              name: toolCallData.function.name,
-              content: JSON.stringify(toolResult)
+              role: 'user',
+              content: `工具已经执行，结果：${toolCallData.function.name} 被触发。
+
+用户的原始消息是："${message}"
+
+请根据以上信息，生成一段温暖、有同理心、个性化的回复，直接输出文字内容，不需要再调用工具。`
             }
           ]
 
           // Second API call for final response (not streaming - get complete response)
+          console.log('[Stream] Messages sent to second call:', JSON.stringify(messagesWithToolResult, null, 2))
+
           const secondResponse = await fetch(
             'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
             {
@@ -671,6 +960,7 @@ app.post('/api/chat/stream', async (req, res) => {
                 },
                 parameters: {
                   result_format: 'message',
+                  enable_search: true,
                 }
               }),
             }
@@ -680,22 +970,90 @@ app.post('/api/chat/stream', async (req, res) => {
 
           if (secondResponse.ok) {
             const secondData = await secondResponse.json()
-            console.log('[Stream] Second response data:', JSON.stringify(secondData).substring(0, 200))
-            const secondContent = secondData.output?.choices?.[0]?.message?.content
-            if (secondContent) {
-              // Send in the format the frontend expects
+            console.log('[Stream] Second response full data:', JSON.stringify(secondData))
+            console.log('[Stream] Second response content paths:')
+            console.log('  - output.choices[0].message.content:', secondData.output?.choices?.[0]?.message?.content)
+            console.log('  - output.choices[0].text:', secondData.output?.choices?.[0]?.text)
+            console.log('  - output.text:', secondData.output?.text)
+            console.log('  - output.content:', secondData.output?.content)
+            console.log('  - choices[0].message.content:', secondData.choices?.[0]?.message?.content)
+            console.log('  - text:', secondData.text)
+            console.log('  - content:', secondData.content)
+
+            // Try multiple possible content paths
+            const secondContent =
+              secondData.output?.choices?.[0]?.message?.content ||
+              secondData.output?.choices?.[0]?.message?.text ||
+              secondData.output?.text ||
+              secondData.output?.content ||
+              ''
+
+            console.log('[Stream] Second response extracted content:', secondContent ? `"${secondContent.substring(0, 100)}..."` : '(empty)')
+            console.log('[Stream] contentSentBeforeToolCall:', contentSentBeforeToolCall)
+            console.log('[Stream] Decision: secondContent exists?', !!secondContent, 'secondContent.trim()?', secondContent ? !!secondContent.trim() : false)
+
+            // Priority: secondContent > default response > tool message > already sent
+            if (secondContent && secondContent.trim()) {
+              // AI generated response from second call - ALWAYS send this, it's the real response
               const responseObj = { output: { choices: [{ message: { content: secondContent } }] } }
+              console.log('[Stream] Writing second response to client:', JSON.stringify(responseObj).substring(0, 200))
               res.write(`data: ${JSON.stringify(responseObj)}\n\n`)
+            } else if (!contentSentBeforeToolCall) {
+              // No content from AI AND no content sent before tool call
+              // Request a warm default response from AI instead of using hardcoded message
+              const defaultResponsePrompt = `用户刚才说："${message}"，这是一个需要心理疗愈的时刻。
+
+请用温暖、有同理心的方式，直接输出一句话来回应用户（不需要调用工具）。`
+
+              try {
+                const defaultResponse = await fetch(
+                  'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${apiKey}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      model: model,
+                      input: {
+                        messages: [
+                          { role: 'system', content: '你是一位温暖、有同理心的心理疗愈师。请用简短温柔的话直接回应用户。' },
+                          { role: 'user', content: defaultResponsePrompt }
+                        ]
+                      },
+                      parameters: { result_format: 'message' }
+                    }),
+                  }
+                )
+
+                if (defaultResponse.ok) {
+                  const defaultData = await defaultResponse.json()
+                  const defaultContent = defaultData.output?.choices?.[0]?.message?.content || ''
+                  if (defaultContent && defaultContent.trim()) {
+                    console.log('[Stream] Using AI generated default response:', defaultContent.substring(0, 30))
+                    const responseObj = { output: { choices: [{ message: { content: defaultContent } }] } }
+                    res.write(`data: ${JSON.stringify(responseObj)}\n\n`)
+                  }
+                }
+              } catch (e) {
+                console.error('[Stream] Default response request failed:', e)
+              }
             } else {
-              console.log('[Stream] No content in second response, using fallback')
-              const fallbackContent = { output: { choices: [{ message: { content: '谢谢你告诉我这些。我感受到了你的不安，我在这里，会一直陪着你。' } }] } }
-              res.write(`data: ${JSON.stringify(fallbackContent)}\n\n`)
+              // Content was already sent before tool call, no additional content from AI
+              // Just log - component will be shown separately
+              console.log('[Stream] Content sent before tool call, component will be shown')
             }
           } else {
             console.error('[Stream] Second response failed:', secondResponse.status, await secondResponse.text())
-            // Fallback: send a warm text response
-            const fallbackContent = { output: { choices: [{ message: { content: '谢谢你告诉我这些，我能感受到你正在经历一些困难的事情。我在这里陪着你，慢慢说，我愿意听。' } }] } }
-            res.write(`data: ${JSON.stringify(fallbackContent)}\n\n`)
+            // Only use tool message if no content was sent before
+            if (!contentSentBeforeToolCall) {
+              const toolMessage = toolResult?.message || ''
+              if (toolMessage) {
+                const responseObj = { output: { choices: [{ message: { content: toolMessage } }] } }
+                res.write(`data: ${JSON.stringify(responseObj)}\n\n`)
+              }
+            }
           }
         }
 
@@ -733,25 +1091,26 @@ app.post('/api/chat/stream', async (req, res) => {
               console.log('[Stream] Tool call found in stream')
               toolCallFound = true
               toolCallData = toolCalls[0]
-              // Also capture any content that came with the tool call message
+              // Check if this event ALSO has content (before tool_calls)
               const contentWithTool = parsed.output?.choices?.[0]?.message?.content
               if (contentWithTool) {
-                console.log('[Stream] Content with tool call:', contentWithTool.substring(0, 50))
-                // Forward the content along with the tool call indicator
-                const contentObj = { output: { choices: [{ message: { content: contentWithTool } }] } }
-                res.write(`data: ${JSON.stringify(contentObj)}\n\n`)
+                console.log('[Stream] Content WITH tool call (will be ignored):', contentWithTool.substring(0, 100))
               }
+              // Do NOT forward content, do NOT set contentSentBeforeToolCall
               continue
             }
 
-            // Forward normal content to client
-            const content = parsed.output?.choices?.[0]?.message?.content || parsed.output?.text
-            console.log('[Stream] Content found:', content ? content.substring(0, 50) : 'null/undefined')
-            if (content) {
+            // Check if this event has content but NO tool_calls (normal content)
+            const contentWithoutTool = parsed.output?.choices?.[0]?.message?.content
+            if (contentWithoutTool && !toolCallFound) {
+              console.log('[Stream] Normal content (forwarding):', contentWithoutTool.substring(0, 50))
+              console.log('[Stream] Forwarding raw line:', line.substring(0, 100))
               res.write(line + '\n\n')
+              contentSentBeforeToolCall = true
             }
           } catch (e) {
             // Forward as plain text if not JSON
+            console.log('[Stream] Non-JSON data, forwarding as text:', data.substring(0, 100))
             if (data) {
               res.write(line + '\n\n')
             }

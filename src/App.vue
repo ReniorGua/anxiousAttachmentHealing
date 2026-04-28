@@ -43,13 +43,22 @@ const isLoading = computed(() => globalStore.loading)
 
 // Access gate state - verified if code matches or if no code is configured
 const ACCESS_CODE = import.meta.env.VITE_ACCESS_CODE || ''
-const isAccessVerified = ref(!ACCESS_CODE)
+
+// Synchronous check: if no code configured OR already verified in localStorage, skip gate
+const hasLocalVerification = localStorage.getItem('access_verified') === '1'
+const isAccessVerified = ref(!ACCESS_CODE || hasLocalVerification)
 
 // Splash screen state
 const showSplash = ref(true)
 
 async function checkAccessVerification() {
   if (!ACCESS_CODE) {
+    isAccessVerified.value = true
+    return
+  }
+
+  // Already verified in localStorage
+  if (localStorage.getItem('access_verified') === '1') {
     isAccessVerified.value = true
     return
   }
@@ -78,8 +87,8 @@ async function checkAccessVerification() {
     }
   }
 
-  // Fallback to localStorage
-  isAccessVerified.value = localStorage.getItem('access_verified') === '1'
+  // Not verified, show gate
+  isAccessVerified.value = false
 }
 
 onMounted(() => {

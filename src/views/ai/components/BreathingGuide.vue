@@ -57,31 +57,57 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { audioGroundingEngine } from '@/services/audioService'
 
 const props = defineProps<{
   message?: string
+  mode?: 'relaxing' | '478'  // relaxing = 6-6-6-3, 478 = 4-7-8-0
+}>()
+
+const emit = defineEmits<{
+  complete: [{ completed: boolean }]
 }>()
 
 type Phase = 'inhale' | 'hold' | 'exhale' | 'rest'
 
-// 呼吸节奏 - 更缓慢
-const PHASE_DURATION = {
-  inhale: 6,
-  hold: 6,
-  exhale: 6,
-  rest: 3
-}
+// 根据模式选择呼吸节奏
+const is478Mode = computed(() => props.mode === '478')
 
-const phases: Phase[] = ['inhale', 'hold', 'exhale', 'rest']
+const PHASE_DURATION = computed(() => {
+  if (is478Mode.value) {
+    // 4-7-8 呼吸法：吸气4秒 → 屏气7秒 → 呼气8秒 → 无休息
+    return { inhale: 4, hold: 7, exhale: 8, rest: 0 }
+  }
+  // 默认：6-6-6-3 更缓慢的呼吸节奏
+  return { inhale: 6, hold: 6, exhale: 6, rest: 3 }
+})
+
+// phases 数组根据模式动态计算（478模式无休息阶段）
+const phases = computed<Phase[]>(() => {
+  if (is478Mode.value) {
+    return ['inhale', 'hold', 'exhale']
+  }
+  return ['inhale', 'hold', 'exhale', 'rest']
+})
+
 const phaseIndex = ref(0)
-const remainingTime = ref(PHASE_DURATION.inhale)
+const remainingTime = ref(PHASE_DURATION.value.inhale)
 const isPaused = ref(false)
 const completedCycles = ref(0)
 let timerInterval: number | null = null
 
-const currentPhase = computed(() => phases[phaseIndex.value])
+const currentPhase = computed(() => phases.value[phaseIndex.value])
 
 const phaseText = computed(() => {
+  if (is478Mode.value) {
+    const texts: Record<Phase, string> = {
+      inhale: '吸气 4秒',
+      hold: '屏息 7秒',
+      exhale: '呼气 8秒',
+      rest: ''
+    }
+    return texts[currentPhase.value]
+  }
   const texts: Record<Phase, string> = {
     inhale: '吸气',
     hold: '屏住',
@@ -92,6 +118,15 @@ const phaseText = computed(() => {
 })
 
 const instruction = computed(() => {
+  if (is478Mode.value) {
+    const instructions: Record<Phase, string> = {
+      inhale: '用鼻子轻轻吸气，数到4',
+      hold: '屏住呼吸，数到7',
+      exhale: '用嘴巴缓缓呼气，数到8',
+      rest: ''
+    }
+    return instructions[currentPhase.value]
+  }
   const instructions: Record<Phase, string> = {
     inhale: '慢慢用鼻子吸气，感受腹部膨胀',
     hold: '轻轻屏住呼吸，保持放松',
@@ -128,14 +163,14 @@ const tick = () => {
     remainingTime.value -= 0.1
   } else {
     // Move to next phase
-    phaseIndex.value = (phaseIndex.value + 1) % phases.length
+    phaseIndex.value = (phaseIndex.value + 1) % phases.value.length
 
     // Count completed cycles
     if (phaseIndex.value === 0) {
       completedCycles.value++
     }
 
-    remainingTime.value = PHASE_DURATION[phases[phaseIndex.value]]
+    remainingTime.value = PHASE_DURATION.value[phases.value[phaseIndex.value]]
   }
 }
 
@@ -145,19 +180,28 @@ const togglePause = () => {
 
 const reset = () => {
   phaseIndex.value = 0
-  remainingTime.value = PHASE_DURATION.inhale
+  remainingTime.value = PHASE_DURATION.value.inhale
   completedCycles.value = 0
   isPaused.value = false
+  // 通知父组件练习完成
+  emit('complete', { completed: true })
 }
 
 onMounted(() => {
   timerInterval = window.setInterval(tick, 100)
+
+  // 启动低频着陆音频，节奏与呼吸同步
+  // 呼吸循环约每分钟 2.86 次 (60/21)，但心跳节奏设定为 60 BPM 保持稳健感
+  // 实际上心跳不需要严格匹配呼吸频率，而是用稳定的 60 BPM 提供持续的"心跳感"
+  audioGroundingEngine.startGrounding()
 })
 
 onUnmounted(() => {
   if (timerInterval) {
     clearInterval(timerInterval)
   }
+  // 平滑关闭音频
+  audioGroundingEngine.stopGrounding()
 })
 </script>
 
