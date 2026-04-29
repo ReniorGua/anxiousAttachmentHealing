@@ -429,7 +429,7 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
                 // CRITICAL: Clear accumulated content when tool call result is received
                 // The content sent before the tool call was just the AI's acknowledgment before calling the tool
                 // The real response will come AFTER this in the stream, so we clear both buffers
-                yield '[CLEAR_CONTENT]'
+
                 // Note: streamingContent cannot be cleared here because it's a ref in the component,
                 // but the component will handle clearing it when the stream ends
 
@@ -506,7 +506,7 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
                 if (parsedErr?.tool_call_result) {
                   console.log('[Stream AI] tool_call_result in catch block, handling it')
                   const result = parsedErr.tool_call_result
-                  yield '[CLEAR_CONTENT]' // Clear any accumulated content
+
                   if (result.component) {
                     window.__lastHealingComponent = result.component
                   }

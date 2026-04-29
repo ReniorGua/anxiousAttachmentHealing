@@ -330,14 +330,6 @@ const handleStreamingResponse = async (userMessage: string) => {
   try {
     console.log('[Chat] Starting stream...')
     for await (const chunk of streamChatWithAI({ message: userMessage, sessionId: aiChatStore.currentSessionId || undefined })) {
-      // ===== 新增开始：处理清空信号 =====
-      if (chunk === '[CLEAR_CONTENT]') {
-        fullContent = ''
-        streamingContent.value = ''
-        console.log('[Chat] 收到清空信号，重置对话流')
-        continue
-      }
-      // ===== 新增结束 =====
       fullContent += chunk
       console.log('[Chat] streamingContent updated, chunk length:', chunk.length, 'fullContent length:', fullContent.length)
       streamingContent.value = fullContent
