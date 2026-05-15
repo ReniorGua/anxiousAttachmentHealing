@@ -468,13 +468,19 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
                 continue
               }
 
-              // Format 1: Direct content in choices
-              if (parsed.output?.choices?.[0]?.message?.content) {
-                content = parsed.output.choices[0].message.content
-              }
-              // Format 2: Incremental content
-              else if (parsed.output?.text) {
-                content = parsed.output.text
+              // Format 1: OpenAI streaming delta content (incremental)
+              const deltaContent = parsed.choices?.[0]?.delta?.content
+              // Format 2: Direct content in choices
+              const directContent = parsed.output?.choices?.[0]?.message?.content || parsed.choices?.[0]?.message?.content
+              // Format 3: Incremental content (legacy)
+              const textContent = parsed.output?.text
+
+              if (deltaContent) {
+                content = deltaContent
+              } else if (directContent) {
+                content = directContent
+              } else if (textContent) {
+                content = textContent
               }
               // Format 3: Error in stream
               else if (parsed.error) {

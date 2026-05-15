@@ -508,16 +508,28 @@ app.post('/api/chat', async (req, res) => {
     const mergedTools = [...TOOLS, ...(Array.isArray(tools) ? tools : [])]
     requestBody.parameters.tools = mergedTools
 
-    // Call DashScope API
+    // Call DashScope API (OpenAI compatible format)
     const dashscopeResponse = await fetch(
-      'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
       {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            {
+              role: 'system',
+              content: mergedSystemPrompt
+            },
+            {
+              role: 'user',
+              content: message
+            }
+          ]
+        }),
       }
     )
 
@@ -544,10 +556,10 @@ app.post('/api/chat', async (req, res) => {
 
     const data = await dashscopeResponse.json()
 
-    // Check if AI requested a tool call
-    const toolCalls = data.output?.choices?.[0]?.message?.tool_calls
-    const firstContent = data.output?.choices?.[0]?.message?.content
-    console.log(`[Chat] Raw response:`, JSON.stringify(data.output).substring(0, 2000))
+    // Check if AI requested a tool call (OpenAI compatible format)
+    const toolCalls = data.choices?.[0]?.message?.tool_calls
+    const firstContent = data.choices?.[0]?.message?.content
+    console.log(`[Chat] Raw response:`, JSON.stringify(data).substring(0, 2000))
     console.log(`[Chat] firstContent (content with tool call):`, firstContent ? `"${firstContent}"` : '(empty)')
 
     if (toolCalls && toolCalls.length > 0) {
@@ -620,7 +632,7 @@ app.post('/api/chat', async (req, res) => {
       ]
 
       const secondResponse = await fetch(
-        'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
         {
           method: 'POST',
           headers: {
@@ -629,13 +641,7 @@ app.post('/api/chat', async (req, res) => {
           },
           body: JSON.stringify({
             model: model,
-            input: {
-              messages: messagesForSecondCall
-            },
-            parameters: {
-              result_format: 'message',
-              enable_search: true,
-            }
+            messages: messagesForSecondCall
           }),
         }
       )
@@ -649,36 +655,26 @@ app.post('/api/chat', async (req, res) => {
         const secondData = await secondResponse.json()
         console.log('[Chat] Second response full data:', JSON.stringify(secondData))
         console.log('[Chat] Second response raw content paths:')
+        console.log('  - secondData.choices?.[0]?.message?.content:', secondData.choices?.[0]?.message?.content)
         console.log('  - secondData.output?.choices?.[0]?.message?.content:', secondData.output?.choices?.[0]?.message?.content)
-        console.log('  - secondData.output?.choices?.[0]?.text:', secondData.output?.choices?.[0]?.text)
         console.log('  - secondData.output?.text:', secondData.output?.text)
         console.log('  - secondData.output?.content:', secondData.output?.content)
-        console.log('  - secondData.choices?.[0]?.message?.content:', secondData.choices?.[0]?.message?.content)
-        console.log('  - secondData.choices?.[0]?.text:', secondData.choices?.[0]?.text)
-        console.log('  - secondData.text:', secondData.text)
-        console.log('  - secondData.content:', secondData.content)
-        console.log('  - secondData.message?.content:', secondData.message?.content)
 
-        // Try ALL possible content paths
+        // Try multiple possible content paths (OpenAI compatible first, then legacy)
         secondContent =
+          secondData.choices?.[0]?.message?.content ||
           secondData.output?.choices?.[0]?.message?.content ||
           secondData.output?.choices?.[0]?.text ||
           secondData.output?.text ||
           secondData.output?.content ||
-          secondData.choices?.[0]?.message?.content ||
-          secondData.choices?.[0]?.text ||
-          secondData.choices?.[0]?.text ||
-          secondData.text ||
-          secondData.content ||
-          secondData.message?.content ||
           ''
       } else {
         console.error('[Chat] Second response FAILED:', secondResponse.status, await secondResponse.text())
       }
 
       console.log('[Chat] Content check:')
-      console.log('  - firstContent:', firstContent ? `"${firstContent.substring(0, 30)}..."` : '(empty)')
-      console.log('  - secondContent:', secondContent ? `"${secondContent.substring(0, 30)}..."` : '(empty)')
+      console.log('  - firstContent:', firstContent ? `"${String(firstContent).substring(0, 30)}..."` : '(empty)')
+      console.log('  - secondContent:', secondContent ? `"${String(secondContent).substring(0, 30)}..."` : '(empty)')
 
       // AI's actual response should come from firstContent (with tool) or secondContent (after tool)
       // Tool's message should NOT be used as the main response
@@ -693,7 +689,7 @@ app.post('/api/chat', async (req, res) => {
 
         try {
           const defaultResponse = await fetch(
-            'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+            'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
             {
               method: 'POST',
               headers: {
@@ -702,21 +698,18 @@ app.post('/api/chat', async (req, res) => {
               },
               body: JSON.stringify({
                 model: model,
-                input: {
-                  messages: [
-                    { role: 'system', content: '你是一位温暖、有同理心的心理疗愈师。请用简短温柔的话直接回应用户。' },
-                    { role: 'user', content: defaultResponsePrompt }
-                  ]
-                },
-                parameters: { result_format: 'message' }
+                messages: [
+                  { role: 'system', content: '你是一位温暖、有同理心的心理疗愈师。请用简短温柔的话直接回应用户。' },
+                  { role: 'user', content: defaultResponsePrompt }
+                ]
               }),
             }
           )
 
           if (defaultResponse.ok) {
             const defaultData = await defaultResponse.json()
-            displayContent = defaultData.output?.choices?.[0]?.message?.content || ''
-            console.log('[Chat] Default response generated:', displayContent ? `"${displayContent.substring(0, 30)}..."` : '(empty)')
+            displayContent = defaultData.choices?.[0]?.message?.content || defaultData.output?.choices?.[0]?.message?.content || ''
+            console.log('[Chat] Default response generated:', displayContent ? `"${String(displayContent).substring(0, 30)}..."` : '(empty)')
           }
         } catch (e) {
           console.error('[Chat] Default response request failed:', e)
@@ -737,7 +730,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     // No tool calls, return normal response
-    const aiResponse = data.output?.choices?.[0]?.message?.content || '谢谢你分享这些。我听到了，愿意继续听你说。'
+    const aiResponse = data.choices?.[0]?.message?.content || data.output?.choices?.[0]?.message?.content || '谢谢你分享这些。我听到了，愿意继续听你说。'
 
     console.log(`[Chat Response] Success, response length: ${aiResponse.length}`)
 
@@ -863,9 +856,9 @@ app.post('/api/chat/stream', async (req, res) => {
     const mergedTools = [...TOOLS, ...(Array.isArray(tools) ? tools : [])]
     requestBody.parameters.tools = mergedTools
 
-    // Call DashScope API with incremental_output for streaming
+    // Call DashScope API with incremental_output for streaming (OpenAI compatible)
     const response = await fetch(
-      'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
       {
         method: 'POST',
         headers: {
@@ -873,7 +866,20 @@ app.post('/api/chat/stream', async (req, res) => {
           'Content-Type': 'application/json',
           'X-DashScope-SSE': 'enable',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            {
+              role: 'system',
+              content: mergedSystemPromptStream
+            },
+            {
+              role: 'user',
+              content: message
+            }
+          ],
+          stream: true,
+        }),
       }
     )
 
@@ -944,7 +950,7 @@ app.post('/api/chat/stream', async (req, res) => {
           console.log('[Stream] Messages sent to second call:', JSON.stringify(messagesWithToolResult, null, 2))
 
           const secondResponse = await fetch(
-            'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+            'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
             {
               method: 'POST',
               headers: {
@@ -953,13 +959,7 @@ app.post('/api/chat/stream', async (req, res) => {
               },
               body: JSON.stringify({
                 model: model,
-                input: {
-                  messages: messagesWithToolResult
-                },
-                parameters: {
-                  result_format: 'message',
-                  enable_search: true,
-                }
+                messages: messagesWithToolResult
               }),
             }
           )
@@ -986,7 +986,7 @@ app.post('/api/chat/stream', async (req, res) => {
               secondData.output?.content ||
               ''
 
-            console.log('[Stream] Second response extracted content:', secondContent ? `"${secondContent.substring(0, 100)}..."` : '(empty)')
+            console.log('[Stream] Second response extracted content:', secondContent ? `"${String(secondContent).substring(0, 100)}..."` : '(empty)')
             console.log('[Stream] contentSentBeforeToolCall:', contentSentBeforeToolCall)
             console.log('[Stream] Decision: secondContent exists?', !!secondContent, 'secondContent.trim()?', secondContent ? !!secondContent.trim() : false)
 
@@ -1005,7 +1005,7 @@ app.post('/api/chat/stream', async (req, res) => {
 
               try {
                 const defaultResponse = await fetch(
-                  'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+                  'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
                   {
                     method: 'POST',
                     headers: {
@@ -1014,22 +1014,19 @@ app.post('/api/chat/stream', async (req, res) => {
                     },
                     body: JSON.stringify({
                       model: model,
-                      input: {
-                        messages: [
-                          { role: 'system', content: '你是一位温暖、有同理心的心理疗愈师。请用简短温柔的话直接回应用户。' },
-                          { role: 'user', content: defaultResponsePrompt }
-                        ]
-                      },
-                      parameters: { result_format: 'message' }
+                      messages: [
+                        { role: 'system', content: '你是一位温暖、有同理心的心理疗愈师。请用简短温柔的话直接回应用户。' },
+                        { role: 'user', content: defaultResponsePrompt }
+                      ]
                     }),
                   }
                 )
 
                 if (defaultResponse.ok) {
                   const defaultData = await defaultResponse.json()
-                  const defaultContent = defaultData.output?.choices?.[0]?.message?.content || ''
+                  const defaultContent = defaultData.choices?.[0]?.message?.content || defaultData.output?.choices?.[0]?.message?.content || ''
                   if (defaultContent && defaultContent.trim()) {
-                    console.log('[Stream] Using AI generated default response:', defaultContent.substring(0, 30))
+                    console.log('[Stream] Using AI generated default response:', String(defaultContent).substring(0, 30))
                     const responseObj = { output: { choices: [{ message: { content: defaultContent } }] } }
                     res.write(`data: ${JSON.stringify(responseObj)}\n\n`)
                   }
@@ -1083,32 +1080,33 @@ app.post('/api/chat/stream', async (req, res) => {
           try {
             const parsed = JSON.parse(data)
 
-            // Check if this is a tool call
-            const toolCalls = parsed.output?.choices?.[0]?.message?.tool_calls
+            // Check if this is a tool call (OpenAI compatible format)
+            const toolCalls = parsed.choices?.[0]?.message?.tool_calls || parsed.output?.choices?.[0]?.message?.tool_calls
             if (toolCalls && toolCalls.length > 0 && !toolCallFound) {
               console.log('[Stream] Tool call found in stream')
               toolCallFound = true
               toolCallData = toolCalls[0]
               // Check if this event ALSO has content (before tool_calls)
-              const contentWithTool = parsed.output?.choices?.[0]?.message?.content
+              const contentWithTool = parsed.choices?.[0]?.message?.content || parsed.output?.choices?.[0]?.message?.content
               if (contentWithTool) {
-                console.log('[Stream] Content WITH tool call (will be ignored):', contentWithTool.substring(0, 100))
+                console.log('[Stream] Content WITH tool call (will be ignored):', String(contentWithTool).substring(0, 100))
               }
               // Do NOT forward content, do NOT set contentSentBeforeToolCall
               continue
             }
 
             // Check if this event has content but NO tool_calls (normal content)
-            const contentWithoutTool = parsed.output?.choices?.[0]?.message?.content
+            // OpenAI compatible: content is in delta.content for streaming, or message.content for full
+            const contentWithoutTool = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || parsed.output?.choices?.[0]?.message?.content || parsed.output?.text
             if (contentWithoutTool && !toolCallFound) {
-              console.log('[Stream] Normal content (forwarding):', contentWithoutTool.substring(0, 50))
+              console.log('[Stream] Normal content (forwarding):', String(contentWithoutTool).substring(0, 50))
               console.log('[Stream] Forwarding raw line:', line.substring(0, 100))
               res.write(line + '\n\n')
               contentSentBeforeToolCall = true
             }
           } catch (e) {
             // Forward as plain text if not JSON
-            console.log('[Stream] Non-JSON data, forwarding as text:', data.substring(0, 100))
+            console.log('[Stream] Non-JSON data, forwarding as text:', String(data).substring(0, 100))
             if (data) {
               res.write(line + '\n\n')
             }
@@ -1200,7 +1198,7 @@ ${conversation}`
 
     // 调用 DashScope
     const response = await fetch(
-      'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
       {
         method: 'POST',
         headers: {
@@ -1209,17 +1207,12 @@ ${conversation}`
         },
         body: JSON.stringify({
           model: model,
-          input: {
-            messages: [
-              {
-                role: 'user',
-                content: summarizationPrompt
-              }
-            ]
-          },
-          parameters: {
-            result_format: 'message',
-          }
+          messages: [
+            {
+              role: 'user',
+              content: summarizationPrompt
+            }
+          ]
         }),
       }
     )
@@ -1231,9 +1224,9 @@ ${conversation}`
     }
 
     const data = await response.json()
-    const rawContent = data.output?.choices?.[0]?.message?.content || ''
+    const rawContent = data.choices?.[0]?.message?.content || data.output?.choices?.[0]?.message?.content || ''
 
-    console.log('[Summarize] Raw LLM response:', rawContent.substring(0, 200))
+    console.log('[Summarize] Raw LLM response:', String(rawContent).substring(0, 200))
 
     // 解析 JSON
     let result = {
