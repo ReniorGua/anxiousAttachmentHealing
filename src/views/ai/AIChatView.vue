@@ -385,12 +385,9 @@ const handleStreamingResponse = async (userMessage: string) => {
   const triggeredComponent = (window as any).__lastHealingComponent as HealingComponentType | undefined
   if (triggeredComponent) {
     console.log('[Chat] Using triggeredComponent:', triggeredComponent)
-    // ===== 新增开始：将获取到的组件赋值给函数的返回变量 =====
-    healingComponent = triggeredComponent 
-    // ===== 新增结束 =====
+    healingComponent = triggeredComponent
     delete (window as any).__lastHealingComponent
-    // 如果疗愈组件被触发，保留流式内容（AI正在引导用户进行练习）
-    // 不要清空 fullContent！
+    console.log('[Chat] healingComponent set to:', triggeredComponent)
   }
 
   // If no tool call triggered, check keywords
@@ -426,11 +423,12 @@ const handleSubmit = async () => {
     // Check __lastHealingComponent AGAIN after streaming completes
     // because tool_call_result may arrive after streaming ends
     const finalHealingComponent = (window as any).__lastHealingComponent as HealingComponentType | undefined
+    let effectiveHealingComponent = healingComponent
     if (finalHealingComponent) {
       console.log('[Chat] Final healing component detected after stream:', finalHealingComponent)
+      effectiveHealingComponent = finalHealingComponent
       delete (window as any).__lastHealingComponent
     }
-    const effectiveHealingComponent = finalHealingComponent || healingComponent
 
     const aiMessage = await aiChatStore.addAIMessage(content)
 

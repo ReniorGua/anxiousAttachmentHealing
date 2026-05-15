@@ -417,56 +417,28 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
             try {
               const parsed = JSON.parse(data)
 
-              // Handle different response formats
-              let content = ''
+              console.log('[Stream AI] Parsed keys:', Object.keys(parsed), 'raw data prefix:', data.substring(0, 80))
 
               // Check for tool call result from backend (after tool execution)
               if (parsed.tool_call_result) {
                 const result = parsed.tool_call_result
                 console.log('[Stream AI] Tool call result from backend:', JSON.stringify(result))
                 console.log('[Stream AI] Setting __lastHealingComponent to:', result.component)
-
-                // CRITICAL: Clear accumulated content when tool call result is received
-                // The content sent before the tool call was just the AI's acknowledgment before calling the tool
-                // The real response will come AFTER this in the stream, so we clear both buffers
-
-                // Note: streamingContent cannot be cleared here because it's a ref in the component,
-                // but the component will handle clearing it when the stream ends
-
-                if (result.success) {
-                  // Handle apply_healing_atmosphere result
-                  if (result.themeColor) {
-                    globalStore.applyHealingAtmosphere(result.themeColor, result.backgroundMusic, result.initialComfort)
-                    console.log('[Stream AI] Applied healing atmosphere:', result.themeColor)
-                  }
-
-                  // Handle new healing component tool results
-                  if (result.component) {
-                    // Store the component type for the UI to render
-                    window.__lastHealingComponent = result.component
-                    console.log('[Stream AI] Healing component stored in window:', result.component)
-                  }
-
-                  // Handle emotion result
-                  if (result.emotion && result.emotion !== 'neutral') {
-                    window.__lastEmotionResult = {
-                      emotion: result.emotion,
-                      intensity: result.intensity,
-                      colorScheme: result.colorScheme,
-                    }
-                    console.log('[Stream AI] Stored emotion result:', window.__lastEmotionResult)
-                  }
-                }
+                window.__lastHealingComponent = result.component
+                console.log('[Stream AI] window.__lastHealingComponent is now:', result.component)
                 continue
               }
 
-              // Check for tool calls in the stream
-              const toolCalls = parsed.output?.choices?.[0]?.message?.tool_calls
+              // Check for tool calls in the stream (OpenAI format uses delta.tool_calls for streaming)
+              const toolCalls = parsed.output?.choices?.[0]?.message?.tool_calls || parsed.choices?.[0]?.delta?.tool_calls
               if (toolCalls && toolCalls.length > 0) {
                 console.log('[Stream AI] Tool calls detected in stream:', toolCalls)
                 // Don't yield content for tool call messages
                 continue
               }
+
+              // Handle different response formats
+              let content = ''
 
               // Format 1: OpenAI streaming delta content (incremental)
               const deltaContent = parsed.choices?.[0]?.delta?.content
@@ -482,7 +454,7 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
               } else if (textContent) {
                 content = textContent
               }
-              // Format 3: Error in stream
+              // Format 4: Error in stream
               else if (parsed.error) {
                 console.error('[Stream AI] Error in stream:', parsed.error)
                 throw new Error(parsed.error)
