@@ -5,21 +5,21 @@
       <!-- 圆形倒计时 -->
       <div class="relative flex items-center justify-center mb-10">
         <!-- 外圈 SVG -->
-        <svg class="w-56 h-56 -rotate-90">
+        <svg class="w-48 h-48 -rotate-90 md:w-56 md:h-56">
           <!-- 背景圈 - 极淡 -->
           <circle
-            cx="112"
-            cy="112"
-            r="100"
+            cx="96"
+            cy="96"
+            r="85"
             stroke="rgba(0,0,0,0.04)"
             stroke-width="4"
             fill="none"
           />
           <!-- 进度圈 -->
           <circle
-            cx="112"
-            cy="112"
-            r="100"
+            cx="96"
+            cy="96"
+            r="85"
             :stroke="progressColor"
             stroke-width="4"
             fill="none"
@@ -33,7 +33,7 @@
         <!-- 中心内容 -->
         <div class="absolute inset-0 flex flex-col items-center justify-center">
           <!-- 时间显示 - 电影字幕风格 -->
-          <div class="text-4xl font-light tracking-widest mb-2 opacity-80" :style="{ color: textColor }">
+          <div class="text-2xl md:text-4xl font-light tracking-widest mb-2 opacity-80" :style="{ color: textColor }">
             {{ formattedTime }}
           </div>
 
@@ -63,7 +63,7 @@
         <button
           v-if="!isRunning"
           @click="startTimer"
-          class="px-8 py-2.5 text-xs tracking-widest font-light transition-all duration-700 opacity-70 hover:opacity-100"
+          class="min-h-[44px] px-8 py-2.5 text-xs tracking-widest font-light transition-all duration-700 opacity-70 hover:opacity-100"
           :style="{ backgroundColor: primaryColor, color: '#5A5A52' }"
         >
           开始
@@ -72,7 +72,7 @@
         <button
           v-else
           @click="pauseTimer"
-          class="px-8 py-2.5 text-xs tracking-widest font-light transition-all duration-700 opacity-70 hover:opacity-100"
+          class="min-h-[44px] px-8 py-2.5 text-xs tracking-widest font-light transition-all duration-700 opacity-70 hover:opacity-100"
           :style="{ backgroundColor: secondaryColor, color: '#5A5A52' }"
         >
           暂停
@@ -81,7 +81,7 @@
         <button
           v-if="hasStarted"
           @click="resetTimer"
-          class="px-6 py-2.5 text-xs tracking-widest font-light border-b opacity-40 hover:opacity-80 transition-all duration-700"
+          class="min-h-[44px] px-6 py-2.5 text-xs tracking-widest font-light border-b opacity-40 hover:opacity-80 transition-all duration-700"
           :style="{ borderColor: 'rgba(0,0,0,0.15)', color: textColor }"
         >
           重置
@@ -120,7 +120,7 @@ const emit = defineEmits<{
 
 // 常量
 const TOTAL_SECONDS = 20 * 60 // 20 分钟
-const RADIUS = 100
+const RADIUS = 85
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
 // State
@@ -240,7 +240,7 @@ onUnmounted(() => {
 
 /* 卡片样式 - 低饱和材质感 */
 .timer-card {
-  @apply relative z-10 p-10;
+  @apply relative z-10 p-6 md:p-10;
   background: rgba(0, 0, 0, 0.015);
   border: 1px solid rgba(0, 0, 0, 0.04);
 }

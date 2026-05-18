@@ -1,9 +1,9 @@
 <template>
-  <div class="flex flex-col h-full" style="background-color: #FAFAF8;">
+  <div class="flex flex-col h-screen" style="background-color: #FAFAF8;">
     <!-- Header -->
     <header
-      class="flex items-center justify-between px-5 py-5 flex-shrink-0"
-      :style="{ backgroundColor: globalStore.customThemeColor || '#8FA98F' }"
+      class="flex items-center justify-between px-5 flex-shrink-0"
+      :style="{ backgroundColor: globalStore.customThemeColor || '#8FA98F', paddingTop: 'max(1.25rem, env(safe-area-inset-top))', paddingBottom: '1.25rem' }"
     >
       <!-- Spacer for balance -->
       <div class="w-8"></div>
@@ -32,7 +32,7 @@
     <div class="flex-1 overflow-hidden flex flex-col">
       <div
         ref="messagesContainer"
-        class="flex-1 overflow-y-auto px-5 py-8 space-y-8"
+        class="flex-1 overflow-y-auto px-5 py-8 space-y-8 overflow-x-hidden"
       >
         <!-- Empty State -->
         <div v-if="messages.length === 0 && !streamingContent" class="flex flex-col items-center justify-center h-full text-center">
@@ -142,7 +142,7 @@
     </div>
 
     <!-- Input Area -->
-    <div class="px-4 py-4 flex-shrink-0" style="background-color: rgba(255,255,254,0.9); border-top: 1px solid rgba(0,0,0,0.04);">
+    <div class="px-4 py-4 flex-shrink-0 safe-area-bottom" style="background-color: rgba(255,255,254,0.9); border-top: 1px solid rgba(0,0,0,0.04); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
       <form @submit.prevent="handleSubmit" class="flex items-end gap-3">
         <div class="flex-1">
           <textarea
@@ -151,6 +151,8 @@
             :placeholder="isStreaming ? '思考中...' : '说点什么...'"
             :disabled="isStreaming"
             rows="1"
+            inputmode="text"
+            enterkeyhint="send"
             class="w-full px-4 py-3 resize-none focus:outline-none text-sm max-h-32"
             style="
               background: transparent;
@@ -321,6 +323,38 @@ const detectHealingComponent = (message: string): HealingComponentType => {
 }
 
 /**
+ * Detect healing component based on AI response content keywords
+ * This handles cases where AI generates text mentioning components instead of calling tools
+ */
+const detectHealingComponentFromAI = (content: string): HealingComponentType => {
+  const lowerContent = content.toLowerCase()
+
+  if (/478呼吸|4-7-8呼吸|呼吸法|一起做/.test(lowerContent)) {
+    return 'breathing478'
+  }
+  if (/能量回收|把能量收回来|不再外耗/.test(lowerContent)) {
+    return 'energyRetraction'
+  }
+  if (/五感|着陆|看看周围|听听声音|摸摸/.test(lowerContent)) {
+    return 'grounding'
+  }
+  if (/身体在说什么|躯体觉察|感受一下/.test(lowerContent)) {
+    return 'somaticRadar'
+  }
+  if (/内在小孩|小小的你|回到过去/.test(lowerContent)) {
+    return 'innerChild'
+  }
+  if (/安全确认卡|确认卡|踏实感|值得被爱|我的价值/.test(lowerContent)) {
+    return 'securityCard'
+  }
+  if (/等一等|给你20分钟|20分钟后/.test(lowerContent)) {
+    return 'waitingTimer'
+  }
+
+  return null
+}
+
+/**
  * Handle streaming response
  */
 const handleStreamingResponse = async (userMessage: string) => {
@@ -394,6 +428,12 @@ const handleStreamingResponse = async (userMessage: string) => {
   if (!healingComponent) {
     healingComponent = detectHealingComponent(userMessage)
     console.log('[Chat] Keyword detection result:', healingComponent)
+  }
+
+  // If still no component, check AI response content for component keywords
+  if (!healingComponent) {
+    healingComponent = detectHealingComponentFromAI(fullContent)
+    console.log('[Chat] AI content detection result:', healingComponent)
   }
 
   return { content: fullContent, healingComponent }

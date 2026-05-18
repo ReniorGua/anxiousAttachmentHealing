@@ -255,12 +255,21 @@ h1, h2, h3 {
   touch-action: manipulation;
 }
 
+/* Disable double-tap zoom on iOS */
+button, a, input, textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 html {
   scroll-behavior: smooth;
+  touch-action: manipulation;
 }
 
 body {
   overscroll-behavior-y: contain;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 移除所有快速弹跳效果 */

@@ -79,7 +79,7 @@
       <button
         v-if="currentStep > 0"
         @click="prevStep"
-        class="px-6 py-2 text-xs tracking-widest font-light transition-all duration-700 opacity-60 hover:opacity-100"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light transition-all duration-700 opacity-60 hover:opacity-100"
         :style="secondaryButtonStyle"
       >
         上一步
@@ -88,7 +88,7 @@
       <button
         v-if="currentStep < steps.length - 1 && isCurrentStepComplete"
         @click="nextStep"
-        class="px-6 py-2 text-xs tracking-widest font-light text-white transition-all duration-700 hover:opacity-80"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light text-white transition-all duration-700 hover:opacity-80"
         :style="primaryButtonStyle"
       >
         继续
@@ -97,7 +97,7 @@
       <button
         v-if="currentStep === steps.length - 1 && isCurrentStepComplete"
         @click="handleComplete"
-        class="px-8 py-2 text-xs tracking-widest font-light text-white transition-all duration-700 hover:opacity-80"
+        class="min-h-[44px] px-8 py-2 text-xs tracking-widest font-light text-white transition-all duration-700 hover:opacity-80"
         :style="primaryButtonStyle"
       >
         完成练习
@@ -116,7 +116,7 @@
         </p>
         <button
           @click="reset"
-          class="mt-5 px-4 py-2 text-xs tracking-widest font-light border-b opacity-50 hover:opacity-100 transition-all duration-700"
+          class="mt-5 min-h-[44px] px-4 py-2 text-xs tracking-widest font-light border-b opacity-50 hover:opacity-100 transition-all duration-700"
           :style="secondaryButtonStyle"
         >
           重新开始

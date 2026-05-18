@@ -14,7 +14,7 @@
     <div class="flex justify-center">
       <button
         @click="handleComplete"
-        class="px-6 py-2 text-xs tracking-widest font-light opacity-70 hover:opacity-90 transition-opacity"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light opacity-70 hover:opacity-90 transition-opacity"
         style="background: rgba(120,80,140,0.4); color: rgba(220,200,230,0.9);"
       >
         我拥抱了TA
