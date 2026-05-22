@@ -5,8 +5,16 @@
       class="flex items-center justify-between px-5 flex-shrink-0"
       :style="{ backgroundColor: globalStore.customThemeColor || '#8FA98F', paddingTop: 'max(1.25rem, env(safe-area-inset-top))', paddingBottom: '1.25rem' }"
     >
-      <!-- Spacer for balance -->
-      <div class="w-8"></div>
+      <!-- Memory timeline icon -->
+      <button
+        @click="$router.push('/memory')"
+        class="w-8 h-8 flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity"
+        title="成长年轮"
+      >
+        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/>
+        </svg>
+      </button>
 
       <h1 class="text-base font-light text-white tracking-widest opacity-90">疗心舍</h1>
 

@@ -45,6 +45,12 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/ai/AIChatView.vue'),
         meta: { title: '疗心舍' },
       },
+      {
+        path: 'memory',
+        name: 'MemoryTimeline',
+        component: () => import('@/views/dashboard/MemoryTimeline.vue'),
+        meta: { title: '成长年轮' },
+      },
     ],
   },
 ]
