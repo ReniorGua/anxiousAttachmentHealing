@@ -108,7 +108,7 @@ supabase db execute -f supabase/schema.sql
 ```bash
 # 1. 克隆项目
 git clone <your-repo>
-cd anxiousAttachmentHealing
+cd HealRestReturn
 
 # 2. 安装依赖
 npm install

@@ -52,7 +52,7 @@
 
 ```bash
 # 进入项目目录
-cd /path/to/anxiousAttachmentHealing
+cd /path/to/HealRestReturn
 
 # 登录 Vercel（首次需要）
 vercel login

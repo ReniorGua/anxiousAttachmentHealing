@@ -52,3 +52,4 @@ TROUBLESHOOTING_AI.md
 dist/
 dist-ssr/
 .qodo
+.vercel

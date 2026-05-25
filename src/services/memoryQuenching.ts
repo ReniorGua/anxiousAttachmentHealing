@@ -116,9 +116,7 @@ async function triggerQuenching() {
     if (result.triggers && result.triggers.length > 0) {
       for (const trigger of result.triggers) {
         userMemoryStore.addTrigger({
-          id: `trigger-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           content: trigger,
-          timestamp: Date.now(),
           category: detectCategory(trigger),
         })
       }
@@ -127,9 +125,7 @@ async function triggerQuenching() {
     if (result.selfSoothingEfforts && result.selfSoothingEfforts.length > 0) {
       for (const effort of result.selfSoothingEfforts) {
         userMemoryStore.addSelfSoothingEffort({
-          id: `effort-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           content: effort,
-          timestamp: Date.now(),
         })
       }
     }
@@ -177,7 +173,7 @@ export function startMemoryQuenching() {
       const session = state.sessions.find(s => s.id === state.currentSessionId)
       if (session && session.messages.length > 0) {
         const lastMessage = session.messages[session.messages.length - 1]
-        incrementRound(lastMessage.role)
+        incrementRound(lastMessage.role as 'user' | 'ai')
         updateLastActivity()
 
         // 检查是否达到轮数阈值
