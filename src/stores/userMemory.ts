@@ -387,8 +387,8 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
   function addTrigger(record: Omit<TriggerRecord, 'id' | 'timestamp'>): TriggerRecord {
     const newRecord: TriggerRecord = {
       ...record,
-      id: record.id || generateId(),
-      timestamp: record.timestamp || Date.now(),
+      id: generateId(),
+      timestamp: Date.now(),
     }
     triggers.value.unshift(newRecord)
     triggers.value = triggers.value.slice(0, 20)
@@ -409,8 +409,8 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
   function addSelfSoothingEffort(record: Omit<SelfSoothingEffortRecord, 'id' | 'timestamp'>): SelfSoothingEffortRecord {
     const newRecord: SelfSoothingEffortRecord = {
       ...record,
-      id: record.id || generateId(),
-      timestamp: record.timestamp || Date.now(),
+      id: generateId(),
+      timestamp: Date.now(),
     }
     selfSoothingEfforts.value.unshift(newRecord)
     selfSoothingEfforts.value = selfSoothingEfforts.value.slice(0, 20)

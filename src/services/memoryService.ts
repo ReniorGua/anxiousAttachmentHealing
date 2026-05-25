@@ -28,7 +28,7 @@ let visibilityCleanup: (() => void) | null = null
  */
 async function extractEmotionalInsights(
   conversationText: string
-): Promise<{ triggers: string[]; strengths: string[] } | null> {
+): Promise<{ triggers: Array<{ content: string; category?: string }>; strengths: Array<{ content: string }> } | null> {
   const systemPrompt = `你是一位悲悯的心理观察者。请从这段对话中提取：
 ① 用户的核心焦虑触发点（如：对方没回消息、自我怀疑、害怕被抛弃等），类型限缩在：abandonment（被抛弃/不被爱）/ selfWorth（自我价值）/ anxiety（过度担忧）/ impulse（冲动行为）/ general（一般焦虑）
 ② 用户展现出的力量（如：尝试了呼吸练习、表达了觉察、主动求助、尝试自我安抚等）
@@ -66,9 +66,11 @@ async function extractEmotionalInsights(
     }
 
     const parsed = JSON.parse(jsonMatch[0])
+    const triggersRaw: unknown[] = Array.isArray(parsed.triggers) ? parsed.triggers : []
+    const strengthsRaw: unknown[] = Array.isArray(parsed.strengths) ? parsed.strengths : []
     return {
-      triggers: Array.isArray(parsed.triggers) ? parsed.triggers : [],
-      strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+      triggers: triggersRaw.map(t => ({ content: (t as { content: string }).content, category: (t as { category?: string }).category })),
+      strengths: strengthsRaw.map(s => ({ content: (s as { content: string }).content })),
     }
   } catch (e) {
     console.error('[MemoryService] extractEmotionalInsights failed:', e)
