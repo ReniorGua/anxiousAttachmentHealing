@@ -4,6 +4,13 @@ import router from './router'
 import App from './App.vue'
 import './style.css'
 
+// VConsole - only enabled in preview environments via VITE_ENABLE_VCONSOLE=true
+if (import.meta.env.VITE_ENABLE_VCONSOLE === 'true') {
+  import('vconsole').then(({ default: VConsole }) => {
+    new VConsole()
+  })
+}
+
 // Import stores
 import { useUserStore } from './stores/user'
 import { useGlobalStore } from './stores/global'

@@ -5,7 +5,8 @@ import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }: ConfigEnv) => {
-  const env = loadEnv(mode, process.cwd(), '')
+  // For preview mode (Vercel preview deployments), also load .env.preview
+  const env = loadEnv(mode, process.cwd(), mode === 'preview' ? ['.env', '.env.preview'] : [''])
 
   return {
     plugins: [
