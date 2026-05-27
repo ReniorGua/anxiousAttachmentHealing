@@ -355,7 +355,7 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
   try {
     console.log('[Stream AI] Sending request to backend...')
 
-    const response = await fetch(`${BACKEND_API_URL}/api/chat/stream`, {
+    const response = await fetch(`${BACKEND_API_URL}/api/chat-stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

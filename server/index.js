@@ -752,11 +752,11 @@ app.post('/api/chat', async (req, res) => {
 })
 
 /**
- * POST /api/chat/stream
+ * POST /api/chat-stream
  * Stream response from DashScope Qwen API (Server-Sent Events)
  * If tool call is detected, execute it and continue with final response
  */
-app.post('/api/chat/stream', async (req, res) => {
+app.post('/api/chat-stream', async (req, res) => {
   const requestId = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
   console.log(`[${requestId}] === STREAMING CHAT REQUEST ===`)
   try {
@@ -1309,7 +1309,7 @@ app.listen(PORT, () => {
 ║                                                        ║
 ║  Endpoints:                                            ║
 ║  POST /api/chat          - Chat with AI                ║
-║  POST /api/chat/stream   - Stream chat response        ║
+║  POST /api/chat-stream  - Stream chat response        ║
 ║  GET  /api/health        - Health check                ║
 ║  GET  /api/models        - List available models       ║
 ╚════════════════════════════════════════════════════════╝
