@@ -1,0 +1,13 @@
+name = "healing-backend"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+
+[vars]
+ALLOWED_ORIGINS = "*"
+
+# 环境变量在 Cloudflare Dashboard Workers Settings 中配置更安全
+# DASHSCOPE_API_KEY=sk-xxx
+# DASHSCOPE_MODEL=qwen-plus
+# ACCESS_CODE=你春天时相信的那句话
+# UPSTASH_REDIS_REST_URL=xxx
+# UPSTASH_REDIS_REST_TOKEN=xxx

@@ -1,21 +1,20 @@
 {
-  "name": "vue3-admin-backend",
+  "name": "healing-backend",
   "version": "1.0.0",
   "type": "module",
-  "description": "Backend proxy service for Vue3 Admin AI features",
-  "main": "index.js",
+  "description": "Cloudflare Workers Backend for 疗心舍",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "hono": "^4.7.4"
   },
   "devDependencies": {
+    "wrangler": "^3.109.2",
     "concurrently": "^9.2.1"
   }
 }
