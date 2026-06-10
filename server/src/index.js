@@ -13,10 +13,15 @@ const app = new Hono()
 
 // CORS middleware - allow all origins for flexibility
 app.use('*', cors({
-  origin: (origin) => origin,
+  origin: (origin) => {
+    // Cloudflare Workers may have empty origin for same-origin requests
+    // Allow all origins but validate in production
+    return origin || '*'
+  },
   allowHeaders: ['Content-Type', 'X-Access-Code'],
   allowMethods: ['POST', 'GET', 'OPTIONS'],
   credentials: true,
+  maxAge: 86400,
 }))
 
 // Tool definitions for DashScope Function Calling
@@ -323,7 +328,13 @@ app.post('/api/chat', async (c) => {
       }
     }
 
-    const body = await c.req.json()
+    let body
+    try {
+      body = await c.req.json()
+    } catch (e) {
+      return c.json({ error: 'Invalid request', message: 'Request body must be valid JSON' }, 400)
+    }
+
     const { message, sessionId, tools = [], systemPrompt: extraSystemPrompt } = body
 
     if (!message || typeof message !== 'string') {
@@ -340,7 +351,10 @@ app.post('/api/chat', async (c) => {
       ? `${BASE_SYSTEM_PROMPT}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
       : BASE_SYSTEM_PROMPT
 
-    // Call DashScope API
+    // Call DashScope API - with 30s timeout
+    const dashscopeController = new AbortController()
+    const dashscopeTimeout = setTimeout(() => dashscopeController.abort(), 30000)
+
     const dashscopeResponse = await fetch(
       'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
       {
@@ -356,8 +370,10 @@ app.post('/api/chat', async (c) => {
             { role: 'user', content: message }
           ]
         }),
+        signal: dashscopeController.signal,
       }
     )
+    clearTimeout(dashscopeTimeout)
 
     if (!dashscopeResponse.ok) {
       const errorData = await dashscopeResponse.json().catch(() => ({}))
@@ -382,8 +398,11 @@ app.post('/api/chat', async (c) => {
         })
       }
 
-      // Second API call to get final response
+      // Second API call to get final response - with 30s timeout
       const toolNames = toolResults.map(tr => tr.toolName).join(', ')
+      const secondController = new AbortController()
+      const secondTimeout = setTimeout(() => secondController.abort(), 30000)
+
       const secondResponse = await fetch(
         'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
         {
@@ -401,8 +420,10 @@ app.post('/api/chat', async (c) => {
               { role: 'user', content: `工具 ${toolNames} 已执行。用户的原始消息是："${message}"。请根据以上信息，生成一段温暖、有同理心、个性化的回复，直接输出文字内容，不需要再调用工具。` }
             ]
           }),
+          signal: secondController.signal,
         }
       )
+      clearTimeout(secondTimeout)
 
       let secondContent = ''
       if (secondResponse.ok) {
@@ -458,7 +479,13 @@ app.post('/api/chat/stream', async (c) => {
       }
     }
 
-    const body = await c.req.json()
+    let body
+    try {
+      body = await c.req.json()
+    } catch (e) {
+      return c.json({ error: 'Invalid request', message: 'Request body must be valid JSON' }, 400)
+    }
+
     const { message, sessionId, tools = [], systemPrompt: extraSystemPrompt } = body
 
     if (!message) {
@@ -475,7 +502,10 @@ app.post('/api/chat/stream', async (c) => {
       ? `${BASE_SYSTEM_PROMPT}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
       : BASE_SYSTEM_PROMPT
 
-    // Call DashScope API with streaming
+    // Call DashScope API with streaming - with 30s timeout
+    const fetchController = new AbortController()
+    const fetchTimeout = setTimeout(() => fetchController.abort(), 30000)
+
     const response = await fetch(
       'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
       {
@@ -493,11 +523,18 @@ app.post('/api/chat/stream', async (c) => {
           ],
           stream: true,
         }),
+        signal: fetchController.signal,
       }
     )
+    clearTimeout(fetchTimeout)
 
     if (!response.ok) {
       throw new Error(`DashScope API error: ${response.status}`)
+    }
+
+    // Check if response body exists
+    if (!response.body) {
+      throw new Error('Response body is null - API may not support streaming')
     }
 
     // Stream response back to client using Edge-compatible ReadableStream
@@ -512,39 +549,62 @@ app.post('/api/chat/stream', async (c) => {
       async start(controller) {
         try {
           while (true) {
-            const { done, value } = await reader.read()
+            let readResult
+            try {
+              readResult = await Promise.race([
+                reader.read(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Read timeout')), 30000))
+              ])
+            } catch (readError) {
+              if (readError.message === 'Read timeout') {
+                controller.enqueue(`data: {"error": "Stream read timeout - please try again"}\n\n`)
+              }
+              break
+            }
+
+            const { done, value } = readResult
             if (done) {
               if (toolCallFound && toolCallData) {
                 toolResult = await executeTool(toolCallData)
                 controller.enqueue(`data: ${JSON.stringify({ tool_call_result: toolResult })}\n\n`)
                 await new Promise(resolve => setTimeout(resolve, 50))
 
-                const secondResponse = await fetch(
-                  'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Authorization': `Bearer ${apiKey}`,
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      model: model,
-                      messages: [
-                        { role: 'system', content: mergedSystemPrompt },
-                        { role: 'user', content: message },
-                        { role: 'assistant', content: '我听到了你内心的风暴。' },
-                        { role: 'user', content: `系统提示：疗愈组件 "${toolCallData.function.name}" 已在界面显示。请直接输出1-2句15字以内的简短引导语，邀请用户配合组件练习。不要提及组件名称，不要输出任何格式（如**加粗**），不要描述用户情绪。范例输出："来，我们一起做。"` }
-                      ]
-                    }),
-                  }
-                )
+                // Second fetch with timeout
+                const secondController = new AbortController()
+                const secondTimeout = setTimeout(() => secondController.abort(), 15000)
+                try {
+                  const secondResponse = await fetch(
+                    'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        model: model,
+                        messages: [
+                          { role: 'system', content: mergedSystemPrompt },
+                          { role: 'user', content: message },
+                          { role: 'assistant', content: '我听到了你内心的风暴。' },
+                          { role: 'user', content: `系统提示：疗愈组件 "${toolCallData.function.name}" 已在界面显示。请直接输出1-2句15字以内的简短引导语，邀请用户配合组件练习。不要提及组件名称，不要输出任何格式（如**加粗**），不要描述用户情绪。范例输出："来，我们一起做。"` }
+                        ]
+                      }),
+                      signal: secondController.signal,
+                    }
+                  )
 
-                if (secondResponse.ok) {
-                  const secondData = await secondResponse.json()
-                  const secondContent = secondData.choices?.[0]?.message?.content || ''
-                  if (secondContent && secondContent.trim()) {
-                    controller.enqueue(`data: ${JSON.stringify({ output: { choices: [{ message: { content: secondContent } }] } })}\n\n`)
+                  if (secondResponse.ok) {
+                    const secondData = await secondResponse.json()
+                    const secondContent = secondData.choices?.[0]?.message?.content || ''
+                    if (secondContent && secondContent.trim()) {
+                      controller.enqueue(`data: ${JSON.stringify({ output: { choices: [{ message: { content: secondContent } }] } })}\n\n`)
+                    }
                   }
+                } catch (secondError) {
+                  console.warn('[Second fetch error]', secondError.message)
+                } finally {
+                  clearTimeout(secondTimeout)
                 }
               }
               controller.enqueue('data: [DONE]\n\n')
@@ -616,7 +676,13 @@ app.post('/api/chat/stream', async (c) => {
  */
 app.post('/api/summarize', async (c) => {
   try {
-    const body = await c.req.json()
+    let body
+    try {
+      body = await c.req.json()
+    } catch (e) {
+      return c.json({ error: 'Invalid request', message: 'Request body must be valid JSON' }, 400)
+    }
+
     const { conversation } = body
 
     if (!conversation || typeof conversation !== 'string') {
@@ -646,6 +712,9 @@ app.post('/api/summarize', async (c) => {
 对话记录：
 ${conversation}`
 
+    const responseController = new AbortController()
+    const responseTimeout = setTimeout(() => responseController.abort(), 30000)
+
     const response = await fetch(
       'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
       {
@@ -658,8 +727,10 @@ ${conversation}`
           model: model,
           messages: [{ role: 'user', content: summarizationPrompt }]
         }),
+        signal: responseController.signal,
       }
     )
+    clearTimeout(responseTimeout)
 
     if (!response.ok) {
       throw new Error(`DashScope API error: ${response.status}`)
