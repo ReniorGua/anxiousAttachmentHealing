@@ -14,7 +14,7 @@
     "hono": "^4.7.4"
   },
   "devDependencies": {
-    "wrangler": "^3.109.2",
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "wrangler": "^4.86.0"
   }
 }

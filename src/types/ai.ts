@@ -6,7 +6,9 @@ export type MessageStatus = 'sending' | 'sent' | 'error' | 'streaming'
 
 export type SpecialType = 'depression' | 'anxiety' | 'stress' | 'anger' | 'fear' | 'tired' | 'lonely' | 'sadness' | null
 
-export type HealingComponentType = 'securityCard' | 'grounding' | 'waitingTimer' | 'breathing478' | 'energyRetraction' | 'somaticRadar' | 'innerChild' | null
+export type HealingComponentType = 'securityCard' | 'grounding' | 'waitingTimer' | 'breathing478' | 'energyRetraction' | 'somaticRadar' | 'innerChild' | 'listWriting' | 'freeWriting' | null
+
+export type ListType = 'desires' | 'joys' | 'fears' | 'values' | 'gratitude'
 
 export interface ChatMessage {
   id: string
@@ -16,6 +18,7 @@ export interface ChatMessage {
   status?: MessageStatus
   specialType?: SpecialType
   healingComponent?: HealingComponentType
+  listType?: ListType
 }
 
 export interface ChatSession {

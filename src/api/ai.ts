@@ -425,6 +425,9 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
                 console.log('[Stream AI] Tool call result from backend:', JSON.stringify(result))
                 console.log('[Stream AI] Setting __lastHealingComponent to:', result.component)
                 window.__lastHealingComponent = result.component
+                if (result.listType) {
+                  window.__lastListType = result.listType
+                }
                 console.log('[Stream AI] window.__lastHealingComponent is now:', result.component)
                 continue
               }

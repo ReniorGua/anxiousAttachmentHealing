@@ -615,13 +615,16 @@ export const useAIChatStore = defineStore('aiChat', () => {
   /**
    * Add healing component to a message
    */
-  async function addHealingComponent(messageId: string, componentType: HealingComponentType) {
+  async function addHealingComponent(messageId: string, componentType: HealingComponentType, listType?: string) {
     const session = sessions.value.find(s => s.id === currentSessionId.value)
     if (!session) return
 
     const message = session.messages.find(m => m.id === messageId)
     if (message) {
       message.healingComponent = componentType
+      if (listType) {
+        message.listType = listType as any
+      }
       saveToStorage()
       // Save to Supabase
       await saveMessageToSupabase(session.id, message)

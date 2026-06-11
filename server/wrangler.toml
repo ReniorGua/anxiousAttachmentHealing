@@ -1,6 +1,6 @@
 name = "healing-backend"
 main = "index.js"
-compatibility_date = "2026-06-01"
+compatibility_date = "2026-05-03"
 
 [vars]
 ALLOWED_ORIGINS = "*"

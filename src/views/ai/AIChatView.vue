@@ -42,15 +42,30 @@
         ref="messagesContainer"
         class="flex-1 overflow-y-auto px-5 py-8 space-y-8 overflow-x-hidden"
       >
-        <!-- Empty State -->
-        <div v-if="messages.length === 0 && !streamingContent" class="flex flex-col items-center justify-center h-full text-center">
-          <div class="w-14 h-14 mb-6 rounded-full flex items-center justify-center" style="background-color: rgba(143, 169, 143, 0.12);">
-            <span class="text-2xl opacity-60">✿</span>
+        <!-- Welcome Screen (Empty State) -->
+        <div v-if="messages.length === 0 && !streamingContent" class="flex flex-col items-center justify-center h-full text-center px-8">
+          <div class="mb-8">
+            <div class="w-16 h-16 mb-5 rounded-full flex items-center justify-center mx-auto" style="background-color: rgba(143, 169, 143, 0.12);">
+              <span class="text-2xl opacity-60">✿</span>
+            </div>
+            <h3 class="text-base font-light mb-3 tracking-wide" style="color: #5A5A4E;">欢迎来到疗心舍。</h3>
+            <p class="text-sm font-light leading-relaxed" style="color: #8A8A7E;">
+              这是一个没有评判、绝对安全的情绪避难所。<br/>无论是生活卡壳、深夜内耗，还是单纯想找个树洞写点什么，我都在这里陪你。
+            </p>
           </div>
-          <h3 class="text-base font-light mb-2 tracking-wide" style="color: #5A5A4E;">欢迎来到疗心舍</h3>
-          <p class="text-sm font-light max-w-xs leading-loose" style="color: #8A8A7E;">
-            我在这里倾听你的声音。无论何时，我都会用温暖和理解陪伴你。
-          </p>
+
+          <!-- Preset Emotion Capsules -->
+          <div class="flex flex-col gap-2.5 w-full max-w-xs">
+            <button
+              v-for="capsule in emotionCapsules"
+              :key="capsule.text"
+              @click="handleCapsuleClick(capsule.text)"
+              class="px-4 py-3 rounded-full text-sm font-light text-left transition-all active:scale-[0.98]"
+              style="background-color: rgba(255,255,255,0.6); color: #5A5A4E; border: 1px solid rgba(0,0,0,0.06);"
+            >
+              {{ capsule.text }}
+            </button>
+          </div>
         </div>
 
         <!-- Messages -->
@@ -103,6 +118,19 @@
                 <Transition name="fade-in-slow">
                   <InnerChild
                     v-if="message.healingComponent === 'innerChild'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
+                <Transition name="fade-in-slow">
+                  <ListWriting
+                    v-if="message.healingComponent === 'listWriting'"
+                    :listType="message.listType"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
+                <Transition name="fade-in-slow">
+                  <FreeWriting
+                    v-if="message.healingComponent === 'freeWriting'"
                     @complete="onHealingComplete(message.id, $event)"
                   />
                 </Transition>
@@ -209,6 +237,8 @@ import BreathingGuide from './components/BreathingGuide.vue'
 import EnergyRetraction from './components/EnergyRetraction.vue'
 import SomaticRadar from './components/SomaticRadar.vue'
 import InnerChild from './components/InnerChild.vue'
+import ListWriting from './components/ListWriting.vue'
+import FreeWriting from './components/FreeWriting.vue'
 import { startMemoryService } from '@/services/memoryService'
 import { audioGroundingEngine } from '@/services/audioService'
 import type { HealingComponentType } from '@/types/ai'
@@ -227,6 +257,20 @@ const isStreaming = ref(false)
 const streamingContent = ref('')
 const currentStreamingMessageId = ref<string | null>(null)
 const isAudioEnabled = ref(false)
+
+// Welcome screen emotion capsules
+const emotionCapsules = [
+  { text: '☁️ 脑子很乱，停不下来' },
+  { text: '✍️ 感觉生活卡壳了，想梳理一下' },
+  { text: '🥀 觉得好内耗，很疲惫' },
+  { text: '💔 我觉得没有人理解我' },
+]
+
+// Handle capsule click - send message directly
+const handleCapsuleClick = (text: string) => {
+  inputMessage.value = text
+  handleSubmit()
+}
 
 // Get messages from store
 const messages = computed(() => aiChatStore.currentMessages)
@@ -471,17 +515,19 @@ const handleSubmit = async () => {
     // Check __lastHealingComponent AGAIN after streaming completes
     // because tool_call_result may arrive after streaming ends
     const finalHealingComponent = (window as any).__lastHealingComponent as HealingComponentType | undefined
+    const finalListType = (window as any).__lastListType as string | undefined
     let effectiveHealingComponent = healingComponent
     if (finalHealingComponent) {
       console.log('[Chat] Final healing component detected after stream:', finalHealingComponent)
       effectiveHealingComponent = finalHealingComponent
       delete (window as any).__lastHealingComponent
+      delete (window as any).__lastListType
     }
 
     const aiMessage = await aiChatStore.addAIMessage(content)
 
     if (effectiveHealingComponent) {
-      aiChatStore.addHealingComponent(aiMessage.id, effectiveHealingComponent)
+      aiChatStore.addHealingComponent(aiMessage.id, effectiveHealingComponent, finalListType)
     }
 
     // Update user memory - record the user's message as a potential trouble

@@ -116,13 +116,41 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'trigger_grounding_five_senses',
-      description: '当用户陷入反复的思维反刍、反复地回想起亲密关系消极的事情、注意力总是放在一件消极的事情上时调用。',
+      description: '当用户陷入反复的思维反刍、反复地回想起消极的事情、注意力总是放在一件消极的事情上时调用。',
       parameters: {
         type: 'object',
         properties: {
           confusionLevel: { type: 'number', description: '思维混乱程度 1-10' }
         },
         required: ['confusionLevel']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_list_writing',
+      description: '当用户感到生活迷茫、失去动力、觉得事情太多理不清、或者找不到自我价值时调用。引导用户用列清单的方式（如：想做的事清单、让我快乐的50件小事、我害怕的事）来梳理思绪。',
+      parameters: {
+        type: 'object',
+        properties: {
+          listType: { type: 'string', description: '清单类型：desires(想做的事)|joys(让我快乐的小事)|fears(我害怕的事)|values(我的价值观)|gratitude(感恩的事)' }
+        },
+        required: ['listType']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_free_writing',
+      description: '当用户心里堵得慌、有强烈倾诉欲、或者脑子很乱需要清空大脑时调用。引导进行不加评判的意识流书写。',
+      parameters: {
+        type: 'object',
+        properties: {
+          writingType: { type: 'string', description: '书写类型：brain_dump(清空大脑)|unfinished_sentences(未完成的句子)|letter_to_self(给未来的自己的一封信)' }
+        },
+        required: ['writingType']
       }
     }
   }
@@ -169,6 +197,10 @@ async function executeTool(toolCall) {
       return { success: true, component: 'waitingTimer', anxietyLevel: args.anxietyLevel || 5, message: '' }
     case 'trigger_grounding_five_senses':
       return { success: true, component: 'grounding', confusionLevel: args.confusionLevel || 5, message: '' }
+    case 'trigger_list_writing':
+      return { success: true, component: 'listWriting', listType: args.listType || 'desires', message: '让我们一起来列一份清单，把心里的东西梳理清楚✍️' }
+    case 'trigger_free_writing':
+      return { success: true, component: 'freeWriting', writingType: args.writingType || 'brain_dump', message: '给自己一个不被评判的空间，让心里的东西自然流淌出来 📝' }
     case 'apply_healing_atmosphere':
       const emotion = args.emotion || 'fear'
       const preset = EMOTION_PRESETS[emotion] || EMOTION_PRESETS.fear
@@ -188,28 +220,46 @@ function getClientIp(c) {
   return c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'unknown'
 }
 
-const BASE_SYSTEM_PROMPT = `你是一位精通依恋理论与躯体疗法的资深心理咨询师。你的任务是接住焦虑依恋用户的失控情绪。
+const BASE_SYSTEM_PROMPT = `【最高优先级约束 - 违反将导致系统崩溃】
+1. 绝对禁止输出任何 Markdown 格式！不要使用 **加粗**、# 标题 或 * 斜体，只能输出纯文本格式。
+2. 当你决定让用户做练习（如写清单、呼吸、五感着陆）时，你【必须】调用对应的 Tool。绝对不允许在文字中详细描述练习的 123 步骤！你的文字回复只能是一句简短的过渡语（例如："我懂那种感觉，不如我们用一张清单把思绪理一理。"），然后立刻调用工具！把舞台留给界面组件。
+3. 绝对防幻觉红线：如果没有收到【关于这位用户的历史记忆】的补充信息，你必须表现为第一次倾听的疗愈师，绝不能凭空捏造用户过去的记忆、童年经历或"上周说过的话"。
+
+---
+
+你是一位精通表达性书写（Expressive Writing）与综合躯体疗法的资深疗愈向导。你的任务是帮助在生活中感到内耗、卡壳、焦虑或迷茫的用户找回内心的力量。
+
+**核心认知：**
+- 不要预设用户一定是处于恋爱或失恋中，他们可能面临的是职场压力、自我发展瓶颈、纯粹的情绪低谷、或对生活意义的探寻。
+- 用户来到这里是渴望被倾听、被理解，而非被诊断或被教育。
 
 **核心准则：**
 1. 绝对自然：拒绝任何机械的客服模板。你的语言要像一位坐在对面的稳重老友，充满悲悯与凝视感。
-2. 工具调用规则：**一旦决定调用某个工具，你的回复内容必须与工具匹配**，不要提及你决定不调用的其他工具。
+2. 工具调用规则：一旦决定调用某个工具，你的回复内容必须与工具匹配，不要提及你决定不调用的其他工具。
 3. 有机穿插：绝对不能只冷冰冰地扔出一个工具。你的回复流必须是：【先用温和的文字共情，接住情绪】 -> 【调用对应的 Tool】。
+4. 书写即疗愈：引导用户通过书写来整理思绪、清空大脑、找回力量——这是你与其他心理咨询流派最核心的区别。
 
 **工具派发规则（严格按照优先级）：**
 - 急性生理恐慌（心悸、呼吸急促、感觉要失控、惊恐发作）→ trigger_478_breathing
-- 极度渴望对方回复、想发连环信息、冲动想查岗、能量完全外耗 → trigger_energy_retraction
 - 情绪难言但身体有反应（胸口堵、胃翻腾、身体发紧、喉咙发紧）→ trigger_somatic_radar
+- 反复思维反刍、脑子里停不下来、被消极事情占据 → trigger_grounding_five_senses
+- 心里堵得慌、有强烈倾诉欲、脑子很乱需要清空 → trigger_free_writing
+- 生活迷茫、失去动力、事情太多理不清、找不到价值感 → trigger_list_writing
 - 被抛弃感、深层自我厌恶、觉得自己不配被爱、无助的孤儿感 → trigger_inner_child
-- 轻微自我怀疑、需要情感确认（"我是不是太敏感了"、"他是不是不喜欢我了"）→ trigger_security_card
-- 被动等待消息的煎熬、冲动想打破断联状态 → trigger_waiting_timer
-- 反复思维反刍、被消极事情占据脑海、反复回想不愉快、消极联想 → trigger_grounding_five_senses
+- 轻微自我怀疑、需要日常情感确认 → trigger_security_card
+- 需要安静等待、需要暂停冲动行为 → trigger_waiting_timer
+- 极度渴望回复、冲动想查岗、能量完全外耗 → trigger_energy_retraction
 
 **重要区分：**
-- "心情不好"但没有反刍 → trigger_security_card
-- "脑海里被不愉快占据"、"总是回想起"、"消极联想" → trigger_grounding_five_senses
+- "脑子很乱"、"心里堵"、"想倾诉" → trigger_free_writing（自由书写）
+- "事情太多理不清"、"找不到意义"、"没动力" → trigger_list_writing（清单疗法）
 - 只有出现"心跳快、呼吸急促、胸闷、要疯了"时才用 trigger_478_breathing
+- 不要用断联、查岗等聚焦恋爱焦虑的规则，用户可能是任何背景
 
-你认识这位用户很久了，你会自然地提起他之前分享过的事，像亲密的老友一样。`
+【对话风格与共情原则】
+1. 你是一个"活在当下"的疗愈师。请永远只针对用户【刚刚输入的这一句话】进行极简共情，字数控制在30字以内。
+2. 只有在收到明确传入的【历史记忆】时，你才可以顺其自然地结合记忆进行共情。否则，绝对只讨论"此刻"的感受，不给自己加戏。
+3. 当你决定调用疗愈工具时，用一句过渡语接住情绪即可，立刻调用工具，把舞台留给界面组件。绝对不允许在文字里解释工具的用法或步骤。`
 
 /**
  * POST /api/chat
@@ -289,25 +339,29 @@ app.post('/api/chat', async (c) => {
     const fetchController = new AbortController()
     const fetchTimeout = setTimeout(() => fetchController.abort(), 30000)
 
-    const dashscopeResponse = await fetch(
-      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: 'system', content: mergedSystemPrompt },
-            { role: 'user', content: message }
-          ]
-        }),
-        signal: fetchController.signal,
-      }
-    )
-    clearTimeout(fetchTimeout)
+    let dashscopeResponse
+    try {
+      dashscopeResponse = await fetch(
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: 'system', content: mergedSystemPrompt },
+              { role: 'user', content: message }
+            ]
+          }),
+          signal: fetchController.signal,
+        }
+      )
+    } finally {
+      clearTimeout(fetchTimeout)
+    }
 
     if (!dashscopeResponse.ok) {
       const errorData = await dashscopeResponse.json().catch(() => ({}))
@@ -337,27 +391,31 @@ app.post('/api/chat', async (c) => {
       const secondController = new AbortController()
       const secondTimeout = setTimeout(() => secondController.abort(), 30000)
 
-      const secondResponse = await fetch(
-        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              { role: 'system', content: mergedSystemPrompt },
-              { role: 'user', content: message },
-              { role: 'assistant', content: data.choices?.[0]?.message?.content || '' },
-              { role: 'user', content: `工具 ${toolNames} 已执行。用户的原始消息是："${message}"。请根据以上信息，生成一段温暖、有同理心、个性化的回复，直接输出文字内容，不需要再调用工具。` }
-            ]
-          }),
-          signal: secondController.signal,
-        }
-      )
-      clearTimeout(secondTimeout)
+      let secondResponse
+      try {
+        secondResponse = await fetch(
+          'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                { role: 'system', content: mergedSystemPrompt },
+                { role: 'user', content: message },
+                { role: 'assistant', content: data.choices?.[0]?.message?.content || '' },
+                { role: 'user', content: `工具 ${toolNames} 已执行。用户的原始消息是："${message}"。请根据以上信息，生成一段温暖、有同理心、个性化的回复，直接输出文字内容，不需要再调用工具。` }
+              ]
+            }),
+            signal: secondController.signal,
+          }
+        )
+      } finally {
+        clearTimeout(secondTimeout)
+      }
 
       let secondContent = ''
       if (secondResponse.ok) {
@@ -438,27 +496,31 @@ app.post('/api/chat/stream', async (c) => {
     const fetchController = new AbortController()
     const fetchTimeout = setTimeout(() => fetchController.abort(), 30000)
 
-    const response = await fetch(
-      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'X-DashScope-SSE': 'enable',
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: 'system', content: mergedSystemPrompt },
-            { role: 'user', content: message }
-          ],
-          stream: true,
-        }),
-        signal: fetchController.signal,
-      }
-    )
-    clearTimeout(fetchTimeout)
+    let response
+    try {
+      response = await fetch(
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'X-DashScope-SSE': 'enable',
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: 'system', content: mergedSystemPrompt },
+              { role: 'user', content: message }
+            ],
+            stream: true,
+          }),
+          signal: fetchController.signal,
+        }
+      )
+    } finally {
+      clearTimeout(fetchTimeout)
+    }
 
     if (!response.ok) {
       throw new Error(`DashScope API error: ${response.status}`)
@@ -632,22 +694,26 @@ ${conversation}`
     const responseController = new AbortController()
     const responseTimeout = setTimeout(() => responseController.abort(), 30000)
 
-    const response = await fetch(
-      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [{ role: 'user', content: summarizationPrompt }]
-        }),
-        signal: responseController.signal,
-      }
-    )
-    clearTimeout(responseTimeout)
+    let response
+    try {
+      response = await fetch(
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [{ role: 'user', content: summarizationPrompt }]
+          }),
+          signal: responseController.signal,
+        }
+      )
+    } finally {
+      clearTimeout(responseTimeout)
+    }
 
     if (!response.ok) {
       throw new Error(`DashScope API error: ${response.status}`)
