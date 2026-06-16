@@ -1,46 +1,40 @@
 <template>
   <div class="security-card-wrapper">
-    <!-- Card Container - 改为简单的淡入淡出 -->
-    <div class="relative w-full max-w-md mx-auto">
-      <transition name="photo-dev" mode="out-in">
-        <!-- Front Side (Affirmation - 显示肯定语) -->
-        <div
-          v-if="!isRevealed"
-          key="front"
-          class="flex flex-col items-center justify-center p-8 rounded-lg cursor-pointer transition-transform active:scale-[0.97]"
-          :style="{ backgroundColor: currentColor }"
-          @click="handleReveal"
-        >
-          <div class="text-2xl mb-3 opacity-70">{{ currentIcon }}</div>
-          <h3 class="text-base font-normal text-white text-center mb-1 tracking-wide opacity-90">
-            自我肯定
-          </h3>
-          <p class="text-xs text-white text-opacity-60 text-center tracking-wider">
-            点击感受
-          </p>
-        </div>
+    <transition name="photo-dev" mode="out-in">
+      <!-- Front Side -->
+      <div
+        v-if="!isRevealed"
+        key="front"
+        class="security-card flex flex-col items-center justify-center rounded-2xl cursor-pointer transition-transform active:scale-[0.97]"
+        :style="{ backgroundColor: currentColor }"
+        @click="handleReveal"
+      >
+        <div class="text-4xl mb-5 opacity-60">{{ currentIcon }}</div>
+        <h3 class="text-lg font-light text-white text-center mb-3 tracking-wide opacity-90">
+          自我肯定
+        </h3>
+        <p class="text-xs text-white text-opacity-50 text-center tracking-wider">
+          点击感受
+        </p>
+      </div>
 
-        <!-- Back Side (显示肯定语) -->
-        <div
-          v-else
-          key="back"
-          class="flex flex-col items-center justify-center p-8 rounded-lg"
-          :style="{ backgroundColor: backColor }"
-          @click="handleReveal"
-        >
-          <div class="text-2xl mb-3 opacity-70">✦</div>
-          <p class="text-base font-light text-white text-center leading-loose px-4 tracking-wide opacity-90">
-            {{ currentAffirmation }}
-          </p>
-          <p class="text-xs text-white text-opacity-50 mt-4 tracking-widest">
-            点击返回
-          </p>
-        </div>
-      </transition>
-    </div>
-
-    <!-- 装饰性细线 -->
-    <div class="max-w-md mx-auto mt-3 h-px" :style="{ backgroundColor: `rgba(0,0,0,0.06)` }" />
+      <!-- Back Side -->
+      <div
+        v-else
+        key="back"
+        class="security-card flex flex-col items-center justify-center rounded-2xl cursor-pointer transition-transform active:scale-[0.97]"
+        :style="{ backgroundColor: backColor }"
+        @click="handleReveal"
+      >
+        <div class="text-3xl mb-5 opacity-50">✦</div>
+        <p class="text-base font-light text-white text-center leading-loose px-6 tracking-wide opacity-90">
+          {{ currentAffirmation }}
+        </p>
+        <p class="text-xs text-white text-opacity-40 mt-6 tracking-widest">
+          点击返回
+        </p>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -113,18 +107,9 @@ const handleReveal = () => {
   width: 100%;
 }
 
-/* 移除所有阴影和3D效果 */
-.perspective-1000,
-.transform-style-3d,
-.backface-hidden,
-.rotate-y-180 {
-  all: unset;
-}
-
-/* 装饰线 */
-.security-card-wrapper > div:last-child {
-  width: 60%;
-  margin-left: auto;
-  margin-right: auto;
+.security-card {
+  width: 100%;
+  min-height: 280px;
+  padding: 40px 32px;
 }
 </style>

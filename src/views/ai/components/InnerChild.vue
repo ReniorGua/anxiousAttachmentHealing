@@ -13,22 +13,33 @@
     </p>
     <div class="flex justify-center">
       <button
+        v-if="!isDone"
         @click="handleComplete"
         class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light opacity-70 hover:opacity-90 transition-all active:scale-95 active:opacity-100"
         style="background: rgba(120,80,140,0.4); color: rgba(220,200,230,0.9);"
       >
         我拥抱了TA
       </button>
+      <div v-else class="flex items-center gap-2 opacity-70" style="color: rgba(200,180,220,0.9);">
+        <span class="text-sm">✿</span>
+        <span class="text-xs tracking-widest font-light">已拥抱</span>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+
 const emit = defineEmits<{
   complete: [{ completed: boolean }]
 }>()
 
+const isDone = ref(false)
+
 const handleComplete = () => {
+  if (isDone.value) return
+  isDone.value = true
   emit('complete', { completed: true })
 }
 </script>
