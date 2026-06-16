@@ -40,7 +40,8 @@ declare global {
       intensity?: number
       colorScheme?: ColorScheme
     }
-    __lastHealingComponent?: 'securityCard' | 'grounding' | 'waitingTimer'
+    __lastHealingComponent?: 'securityCard' | 'grounding' | 'waitingTimer' | 'breathing478' | 'energyRetraction' | 'somaticRadar' | 'innerChild' | 'listWriting' | 'freeWriting'
+    __lastListType?: string
   }
 }
 
@@ -292,7 +293,8 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
         const healingToolNames = [
           'showSecurityCard', 'showGrounding', 'showWaitingTimer',
           'trigger_478_breathing', 'trigger_energy_retraction',
-          'trigger_somatic_radar', 'trigger_inner_child', 'trigger_security_card'
+          'trigger_somatic_radar', 'trigger_inner_child', 'trigger_security_card',
+          'trigger_list_writing', 'trigger_free_writing'
         ]
         if (healingToolNames.includes(toolCall.toolName) && toolCall.result?.success) {
           const result = toolCall.result as any
@@ -306,9 +308,28 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
       console.log('[Real AI] No tool calls in response')
     }
 
+    // Clean content: remove any tool names that might appear in the response text
+    let cleanContent = data.content || ''
+    const toolNamePatterns = [
+      /trigger_list_writing/gi,
+      /trigger_free_writing/gi,
+      /trigger_478_breathing/gi,
+      /trigger_energy_retraction/gi,
+      /trigger_somatic_radar/gi,
+      /trigger_inner_child/gi,
+      /trigger_security_card/gi,
+      /trigger_waiting_timer/gi,
+      /trigger_grounding_five_senses/gi,
+    ]
+    for (const pattern of toolNamePatterns) {
+      cleanContent = cleanContent.replace(pattern, '')
+    }
+    // Clean up any dangling punctuation or whitespace at the end
+    cleanContent = cleanContent.replace(/[\s\.。，,]+$/g, '').trim()
+
     return {
       messageId: data.messageId,
-      content: data.content,
+      content: cleanContent,
       sessionId: data.sessionId,
       usage: data.usage,
       toolCalls: data.toolCalls,
@@ -423,13 +444,19 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
               if (parsed.tool_call_result) {
                 const result = parsed.tool_call_result
                 console.log('[Stream AI] Tool call result from backend:', JSON.stringify(result))
-                console.log('[Stream AI] Setting __lastHealingComponent to:', result.component)
-                window.__lastHealingComponent = result.component
-                if (result.listType) {
+                console.log('[Stream AI] Setting __lastHealingComponent to:', result?.component)
+                if (result?.component) {
+                  window.__lastHealingComponent = result.component
+                  console.log('[Stream AI] window.__lastHealingComponent is now:', result.component)
+                } else {
+                  console.log('[Stream AI] WARNING: result.component is undefined!')
+                }
+                if (result?.listType) {
                   window.__lastListType = result.listType
                 }
-                console.log('[Stream AI] window.__lastHealingComponent is now:', result.component)
                 continue
+              } else {
+                console.log('[Stream AI] No tool_call_result in parsed. Available keys:', Object.keys(parsed))
               }
 
               // Check for tool calls in the stream (OpenAI format uses delta.tool_calls for streaming)
@@ -473,6 +500,23 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
                   // Also handle case where it appears as standalone line
                   content = content.replace(/^[\s]*\{\s*"tool_call_result"[^}]*\}[\s]*$/gm, '').trim()
                 }
+                // Strip tool names that appear anywhere in text content
+                const toolPatterns = [
+                  /trigger_list_writing/gi,
+                  /trigger_free_writing/gi,
+                  /trigger_478_breathing/gi,
+                  /trigger_energy_retraction/gi,
+                  /trigger_somatic_radar/gi,
+                  /trigger_inner_child/gi,
+                  /trigger_security_card/gi,
+                  /trigger_waiting_timer/gi,
+                  /trigger_grounding_five_senses/gi,
+                ]
+                for (const pattern of toolPatterns) {
+                  content = content.replace(pattern, '')
+                }
+                // Clean up any dangling punctuation or whitespace at the end
+                content = content.replace(/[\s\.。，,]+$/g, '').trim()
                 if (content) {
                   console.log('[Stream AI] Yielding content:', JSON.stringify(content).substring(0, 100))
                   yield content

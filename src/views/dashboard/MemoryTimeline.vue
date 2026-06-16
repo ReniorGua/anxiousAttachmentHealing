@@ -1,104 +1,65 @@
 <template>
-  <div class="flex flex-col h-screen" style="background-color: #FAFAF8;">
+  <div class="memory-timeline">
+    <!-- Top Left Return -->
+    <router-link to="/" class="return-btn" title="返回">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </router-link>
+
+    <!-- Top Mini Navigation -->
+    <div class="top-nav">
+      <router-link to="/chat" class="nav-icon-btn" title="倾诉树洞">
+        <span class="text-sm">💬</span>
+      </router-link>
+      <router-link to="/practice" class="nav-icon-btn" title="疗愈岛屿">
+        <span class="text-sm">🌿</span>
+      </router-link>
+    </div>
+
     <!-- Header -->
-    <header
-      class="flex items-center justify-between px-5 flex-shrink-0"
-      :style="{ backgroundColor: globalStore.customThemeColor || '#8FA98F', paddingTop: 'max(1.25rem, env(safe-area-inset-top))', paddingBottom: '1.25rem' }"
-    >
-      <!-- Back button -->
-      <button
-        @click="$router.back()"
-        class="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity"
-      >
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/>
-        </svg>
-      </button>
-
-      <h1 class="text-base font-light text-white tracking-widest opacity-90">成长年轮</h1>
-
-      <!-- Spacer for balance -->
-      <div class="w-8"></div>
-    </header>
+    <div class="page-header">
+      <h1 class="page-title">成长年轮</h1>
+      <p class="page-subtitle">每一次你尝试安抚自己，都是值得被记住的进步</p>
+    </div>
 
     <!-- Timeline Content -->
-    <div class="flex-1 overflow-y-auto">
+    <div class="timeline-content">
       <!-- Empty State -->
-      <div v-if="sortedMilestones.length === 0" class="flex flex-col items-center justify-center h-full text-center px-8">
-        <div class="w-16 h-16 mb-6 rounded-full flex items-center justify-center" style="background-color: rgba(143, 169, 143, 0.1);">
-          <span class="text-2xl opacity-40">✿</span>
-        </div>
-        <h3 class="text-base font-light mb-2 tracking-wide" style="color: #5A5A4E;">还没有记录</h3>
-        <p class="text-sm font-light max-w-xs leading-loose" style="color: #8A8A7E;">
-          每一次你尝试安抚自己，都是值得被记住的进步。
-        </p>
+      <div v-if="sortedMilestones.length === 0" class="empty-state">
+        <div class="empty-icon">✿</div>
+        <h3 class="empty-title">还没有记录</h3>
+        <p class="empty-text">每一次你尝试安抚自己，都是值得被记住的进步。</p>
       </div>
 
       <!-- Timeline -->
-      <div v-else class="px-5 py-10">
-        <!-- Year rings header -->
-        <div class="text-center mb-12">
-          <p class="text-xs tracking-widest opacity-40 font-light" style="color: #8FA98F;">你走过的路</p>
-        </div>
-
+      <div v-else class="timeline">
         <!-- Timeline entries -->
-        <div class="relative">
-          <!-- Vertical line -->
+        <div class="timeline-entries">
           <div
-            class="absolute left-5 top-0 bottom-0 w-px"
-            style="background: linear-gradient(to bottom, transparent, rgba(143,169,143,0.2) 10%, rgba(143,169,143,0.2) 90%, transparent);"
-          ></div>
+            v-for="(milestone, index) in sortedMilestones"
+            :key="milestone.id"
+            class="timeline-entry"
+          >
+            <!-- Dot -->
+            <div class="entry-dot">
+              <span class="dot-icon">{{ getDotIcon(milestone.type) }}</span>
+            </div>
 
-          <!-- Entries -->
-          <div class="space-y-12">
-            <div
-              v-for="(milestone, index) in sortedMilestones"
-              :key="milestone.id"
-              class="relative flex items-start gap-6"
-            >
-              <!-- Dot on timeline -->
-              <div
-                class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center z-10"
-                :style="{
-                  backgroundColor: getDotColor(milestone.type),
-                  boxShadow: '0 0 12px rgba(143,169,143,0.15)'
-                }"
-              >
-                <span class="text-sm">{{ getDotIcon(milestone.type) }}</span>
-              </div>
-
-              <!-- Content card -->
-              <div class="flex-1 pt-1">
-                <!-- Date -->
-                <p class="text-xs tracking-widest mb-2" style="color: rgba(143,169,143,0.6);">
-                  {{ formatDate(milestone.timestamp) }}
-                </p>
-                <!-- Content -->
-                <p class="text-sm leading-relaxed font-light" style="color: #4A4A3E;">
-                  {{ milestone.content }}
-                </p>
-                <!-- Type tag -->
-                <div class="mt-2">
-                  <span
-                    class="text-xs px-2 py-0.5 rounded-full font-light"
-                    :style="{
-                      backgroundColor: getTagBg(milestone.type),
-                      color: getTagColor(milestone.type)
-                    }"
-                  >
-                    {{ getTypeLabel(milestone.type) }}
-                  </span>
-                </div>
-              </div>
+            <!-- Content -->
+            <div class="entry-content">
+              <p class="entry-date">{{ formatDate(milestone.timestamp) }}</p>
+              <p class="entry-text">{{ milestone.content }}</p>
+              <span class="entry-tag" :style="{ backgroundColor: getTagBg(milestone.type), color: getTagColor(milestone.type) }">
+                {{ getTypeLabel(milestone.type) }}
+              </span>
             </div>
           </div>
         </div>
 
         <!-- Bottom blessing -->
-        <div class="mt-16 text-center">
-          <p class="text-sm font-light tracking-wide" style="color: rgba(143,169,143,0.5);">
-            每一圈年轮，都是一次温柔的自我接纳。
-          </p>
+        <div class="bottom-blessing">
+          <p>每一圈年轮，都是一次温柔的自我接纳。</p>
         </div>
       </div>
     </div>
@@ -107,11 +68,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useGlobalStore } from '@/stores/global'
 import { useUserMemoryStore } from '@/stores/userMemory'
 import type { MilestoneRecord } from '@/stores/userMemory'
 
-const globalStore = useGlobalStore()
 const userMemoryStore = useUserMemoryStore()
 
 // Sort milestones by timestamp descending (newest first)
@@ -130,16 +89,6 @@ const formatDate = (timestamp: number): string => {
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}周前`
   if (diffDays < 365) return `${Math.floor(diffDays / 30)}个月前`
   return `${Math.floor(diffDays / 365)}年前`
-}
-
-const getDotColor = (type: MilestoneRecord['type']): string => {
-  const colors: Record<string, string> = {
-    self_soothing: 'rgba(143,169,143,0.25)',
-    breakthrough: 'rgba(180,160,120,0.25)',
-    peace: 'rgba(143,169,143,0.15)',
-    courage: 'rgba(180,140,100,0.2)',
-  }
-  return colors[type] || 'rgba(143,169,143,0.25)'
 }
 
 const getDotIcon = (type: MilestoneRecord['type']): string => {
@@ -184,14 +133,197 @@ const getTypeLabel = (type: MilestoneRecord['type']): string => {
 </script>
 
 <style scoped>
-.overflow-y-auto::-webkit-scrollbar {
-  width: 3px;
+.memory-timeline {
+  min-height: 100vh;
+  padding: 24px 24px 48px;
+  background: linear-gradient(180deg, rgba(250,248,245,1) 0%, rgba(245,243,240,1) 100%);
 }
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: transparent;
+
+/* Top Mini Navigation */
+.top-nav {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 12px;
 }
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.06);
-  border-radius: 2px;
+
+.nav-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5A5A52;
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 500ms ease;
+  text-decoration: none;
+}
+
+.nav-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Return Button */
+.return-btn {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5A5A52;
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 500ms ease;
+  text-decoration: none;
+  z-index: 100;
+}
+
+.return-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Header */
+.page-header {
+  text-align: center;
+  margin-bottom: 48px;
+  padding-top: 16px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  color: #5A5A52;
+  margin-bottom: 12px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  font-weight: 300;
+  color: #8A8A7E;
+  letter-spacing: 0.05em;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 24px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.3;
+  margin-bottom: 24px;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 300;
+  color: #5A5A52;
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-size: 14px;
+  font-weight: 300;
+  color: #8A8A7E;
+  line-height: 1.7;
+}
+
+/* Timeline */
+.timeline-content {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.timeline-entries {
+  position: relative;
+  padding-left: 32px;
+}
+
+.timeline-entries::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(143,169,143,0.2) 10%, rgba(143,169,143,0.2) 90%, transparent);
+}
+
+.timeline-entry {
+  position: relative;
+  margin-bottom: 40px;
+}
+
+.entry-dot {
+  position: absolute;
+  left: -28px;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(143, 169, 143, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot-icon {
+  font-size: 10px;
+  color: #8FA98F;
+}
+
+.entry-content {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.entry-date {
+  font-size: 12px;
+  font-weight: 300;
+  color: rgba(143,169,143,0.6);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.entry-text {
+  font-size: 14px;
+  font-weight: 300;
+  color: #5A5A52;
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+
+.entry-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 300;
+}
+
+/* Bottom Blessing */
+.bottom-blessing {
+  text-align: center;
+  margin-top: 48px;
+  padding-top: 24px;
+}
+
+.bottom-blessing p {
+  font-size: 14px;
+  font-weight: 300;
+  color: rgba(143,169,143,0.5);
+  letter-spacing: 0.05em;
 }
 </style>

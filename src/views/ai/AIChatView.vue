@@ -1,77 +1,52 @@
 <template>
-  <div class="flex flex-col h-screen" style="background-color: #FAFAF8;">
+  <div class="flex flex-col h-[100dvh] w-full overflow-hidden bg-[rgba(250,248,245,1)]">
+
+    <!-- Top Left Return -->
+    <router-link to="/" class="return-btn" title="返回首页">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </router-link>
+
+    <!-- Top Mini Navigation -->
+    <div class="top-nav">
+      <router-link to="/practice" class="nav-icon-btn" title="疗愈岛屿">
+        <span class="text-sm">🌿</span>
+      </router-link>
+      <router-link to="/chat/memory" class="nav-icon-btn" title="成长年轮">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </router-link>
+    </div>
+
     <!-- Header -->
-    <header
-      class="flex items-center justify-between px-5 flex-shrink-0"
-      :style="{ backgroundColor: globalStore.customThemeColor || '#8FA98F', paddingTop: 'max(1.25rem, env(safe-area-inset-top))', paddingBottom: '1.25rem' }"
-    >
-      <!-- Memory timeline icon -->
-      <button
-        @click="$router.push('/memory')"
-        class="w-8 h-8 flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity"
-        title="成长年轮"
-      >
-        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/>
-        </svg>
-      </button>
-
-      <h1 class="text-base font-light text-white tracking-widest opacity-90">疗心舍</h1>
-
-      <!-- Global Audio Toggle - 放在右侧 -->
-      <button
-        @click="toggleAudio"
-        class="w-8 h-8 flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity"
-        :title="isAudioEnabled ? '关闭声音' : '开启声音'"
-      >
-        <!-- 开启状态图标 -->
-        <svg v-if="isAudioEnabled" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
-        </svg>
-        <!-- 静音状态图标 -->
-        <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
-        </svg>
-      </button>
-    </header>
+    <div class="flex-none text-center mb-6 pt-4">
+      <h1 class="text-[28px] font-[300] tracking-[0.15em] text-[#5A5A52] mb-3">倾诉树洞</h1>
+      <p class="text-[14px] font-[300] text-[#8A8A7E] tracking-[0.05em]">在这里停下来，照顾自己</p>
+    </div>
 
     <!-- Chat Messages Area -->
-    <div class="flex-1 overflow-hidden flex flex-col">
-      <div
-        ref="messagesContainer"
-        class="flex-1 overflow-y-auto px-5 py-8 space-y-8 overflow-x-hidden"
-      >
-        <!-- Welcome Screen (Empty State) -->
-        <div v-if="messages.length === 0 && !streamingContent" class="flex flex-col items-center justify-center h-full text-center px-8">
-          <div class="mb-8">
-            <div class="w-16 h-16 mb-5 rounded-full flex items-center justify-center mx-auto" style="background-color: rgba(143, 169, 143, 0.12);">
-              <span class="text-2xl opacity-60">✿</span>
-            </div>
-            <h3 class="text-base font-light mb-3 tracking-wide" style="color: #5A5A4E;">欢迎来到疗心舍。</h3>
-            <p class="text-sm font-light leading-relaxed" style="color: #8A8A7E;">
-              这是一个没有评判、绝对安全的情绪避难所。<br/>无论是生活卡壳、深夜内耗，还是单纯想找个树洞写点什么，我都在这里陪你。
-            </p>
-          </div>
+    <div
+      ref="messageListRef"
+      class="flex-1 overflow-y-auto overscroll-none"
+    >
+      <div class="max-w-[640px] mx-auto px-4">
 
-          <!-- Preset Emotion Capsules -->
-          <div class="flex flex-col gap-2.5 w-full max-w-xs">
-            <button
-              v-for="capsule in emotionCapsules"
-              :key="capsule.text"
-              @click="handleCapsuleClick(capsule.text)"
-              class="px-4 py-3 rounded-full text-sm font-light text-left transition-all active:scale-[0.98]"
-              style="background-color: rgba(255,255,255,0.6); color: #5A5A4E; border: 1px solid rgba(0,0,0,0.06);"
-            >
-              {{ capsule.text }}
-            </button>
-          </div>
+        <!-- Welcome Screen (Empty State) -->
+        <div v-if="messages.length === 0 && !streamingContent" class="empty-state">
+          <div class="empty-icon">✿</div>
+          <h3 class="empty-title">欢迎来到松间心舍。</h3>
+          <p class="empty-text">
+            这是一个没有评判、绝对安全的情绪避难所。<br/>
+            无论是生活卡壳、深夜内耗，还是单纯想找个树洞写点什么，我都在这里陪你。
+          </p>
         </div>
 
         <!-- Messages -->
-        <template v-for="message in messages" :key="message.id">
+        <template v-for="(message, index) in messages" :key="message.id">
           <!-- User Message -->
-          <div v-if="message.role === 'user'" class="flex justify-end">
+          <div v-if="message.role === 'user'" class="message-item message-user">
             <div
               class="max-w-[80%] px-5 py-3 text-white rounded-none"
               :style="{ backgroundColor: globalStore.customThemeColor || '#8FA98F' }"
@@ -81,13 +56,13 @@
           </div>
 
           <!-- AI Message with optional Healing Component -->
-          <div v-else class="flex justify-start flex-col">
+          <div v-else class="message-item message-ai">
             <div class="max-w-[80%] px-5 py-3" style="background-color: rgba(255,255,255,0.7); color: #4A4A3E;">
               <p class="text-sm leading-loose whitespace-pre-wrap">{{ message.content }}</p>
               <p class="text-xs mt-2 opacity-40 tracking-wider">{{ formatTime(message.timestamp) }}</p>
             </div>
 
-            <!-- Healing Component - 缓慢显影效果 -->
+            <!-- Healing Component -->
             <Transition name="photo-dev">
               <div v-if="message.healingComponent" class="mt-5 max-w-[80%]">
                 <SecurityCard
@@ -140,14 +115,14 @@
         </template>
 
         <!-- Streaming Message -->
-        <div v-if="streamingContent" class="flex justify-start">
+        <div v-if="streamingContent" class="message-item message-ai">
           <div class="max-w-[80%] px-5 py-3" style="background-color: rgba(255,255,255,0.7); color: #4A4A3E;">
             <p class="text-sm leading-loose whitespace-pre-wrap">{{ streamingContent }}</p>
           </div>
         </div>
 
-        <!-- Loading Indicator - 缓慢呼吸的三个点 -->
-        <div v-if="isStreaming && !streamingContent" class="flex justify-start">
+        <!-- Loading Indicator -->
+        <div v-if="isStreaming && !streamingContent" class="message-item message-ai">
           <div class="px-5 py-3" style="background-color: rgba(255,255,255,0.7);">
             <div class="flex space-x-2">
               <div
@@ -174,12 +149,13 @@
             </div>
           </div>
         </div>
+
       </div>
     </div>
 
     <!-- Input Area -->
-    <div class="px-4 py-4 flex-shrink-0 safe-area-bottom" style="background-color: rgba(255,255,254,0.9); border-top: 1px solid rgba(0,0,0,0.04); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
-      <form @submit.prevent="handleSubmit" class="flex items-end gap-3">
+    <div class="flex-none px-6 py-4 bg-[rgba(250,248,245,0.95)] border-t border-black/[0.04]">
+      <form @submit.prevent="handleSubmit" class="max-w-[640px] mx-auto flex items-end gap-3">
         <div class="flex-1">
           <textarea
             ref="inputRef"
@@ -189,16 +165,7 @@
             rows="1"
             inputmode="text"
             enterkeyhint="send"
-            class="w-full px-4 py-3 resize-none focus:outline-none text-sm max-h-32"
-            style="
-              background: transparent;
-              border: none;
-              border-bottom: 1px solid rgba(0,0,0,0.08);
-              color: #4A4A3E;
-              letter-spacing: 0.02em;
-            "
-            @focus="(e: FocusEvent) => ((e.target as HTMLTextAreaElement).style.borderBottomColor = `rgba(143, 169, 143, 0.4)`)"
-            @blur="(e: FocusEvent) => ((e.target as HTMLTextAreaElement).style.borderBottomColor = 'rgba(0,0,0,0.08)')"
+            class="input-textarea"
             @input="autoResize"
             @keydown.enter.exact.prevent="handleSubmit"
           />
@@ -206,11 +173,8 @@
         <button
           type="submit"
           :disabled="!inputMessage.trim() || isStreaming"
-          class="w-11 h-11 flex items-center justify-center rounded-none transition-all opacity-80"
-          :style="{
-            backgroundColor: inputMessage.trim() && !isStreaming ? (globalStore.customThemeColor || '#8FA98F') : 'rgba(0,0,0,0.04)',
-            color: inputMessage.trim() && !isStreaming ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.25)',
-          }"
+          class="send-button"
+          :class="{ active: inputMessage.trim() && !isStreaming }"
         >
           <svg v-if="!isStreaming" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
@@ -249,7 +213,7 @@ const userMemoryStore = useUserMemoryStore()
 
 // Refs
 const inputRef = ref<HTMLTextAreaElement | null>(null)
-const messagesContainer = ref<HTMLElement | null>(null)
+const messageListRef = ref<HTMLElement | null>(null)
 
 // State
 const inputMessage = ref('')
@@ -295,9 +259,10 @@ const autoResize = (event: Event) => {
 /**
  * Scroll to bottom
  */
-const scrollToBottomImmediate = () => {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+const scrollToBottom = async () => {
+  await nextTick()
+  if (messageListRef.value) {
+    messageListRef.value.scrollTop = messageListRef.value.scrollHeight
   }
 }
 
@@ -419,7 +384,7 @@ const handleStreamingResponse = async (userMessage: string) => {
       fullContent += chunk
       console.log('[Chat] streamingContent updated, chunk length:', chunk.length, 'fullContent length:', fullContent.length)
       streamingContent.value = fullContent
-      scrollToBottomImmediate()
+      scrollToBottom()
     }
     console.log('[Chat] Stream complete, final content length:', fullContent.length, 'content preview:', fullContent.substring(0, 50))
   } catch (error: any) {
@@ -506,7 +471,7 @@ const handleSubmit = async () => {
       inputRef.value.style.height = 'auto'
     }
 
-    scrollToBottomImmediate()
+    scrollToBottom()
     isStreaming.value = true
     streamingContent.value = ''
 
@@ -565,17 +530,11 @@ onMounted(async () => {
 
   await nextTick()
 
-  // Use requestAnimationFrame to ensure browser has painted before scrolling
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      if (messagesContainer.value) {
-        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-      }
-      if (inputRef.value) {
-        inputRef.value.focus()
-      }
-    })
-  })
+  // Scroll to bottom after messages loaded
+  scrollToBottom()
+  if (inputRef.value) {
+    inputRef.value.focus()
+  }
 
   // 启动长效记忆大脑
   stopMemoryService = startMemoryService()
@@ -590,16 +549,12 @@ onUnmounted(() => {
 
 // Watch messages - scroll to bottom when messages change
 watch(() => messages.value.length, () => {
-  nextTick(() => scrollToBottomImmediate())
+  nextTick(() => scrollToBottom())
 }, { deep: true })
 
 // Also watch for the actual messages array to handle reload from storage
 watch(() => aiChatStore.sessions, () => {
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  })
+  scrollToBottom()
 }, { deep: true })
 </script>
 
@@ -608,17 +563,15 @@ watch(() => aiChatStore.sessions, () => {
 .overflow-y-auto::-webkit-scrollbar {
   width: 3px;
 }
-
 .overflow-y-auto::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .overflow-y-auto::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.06);
   border-radius: 2px;
 }
 
-/* 呼吸dot动画 - 替代bounce */
+/* 呼吸dot动画 */
 @keyframes breathe-dot {
   0%, 100% {
     opacity: 0.25;
@@ -653,5 +606,132 @@ p {
 .fade-in-slow-enter-from,
 .fade-in-slow-leave-to {
   opacity: 0;
+}
+
+/* Top Mini Navigation */
+.top-nav {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+}
+
+.nav-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5A5A52;
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 500ms ease;
+  text-decoration: none;
+}
+.nav-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Return Button */
+.return-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5A5A52;
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 500ms ease;
+  text-decoration: none;
+  z-index: 10;
+}
+.return-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Message Items */
+.message-item {
+  padding: 6px 0;
+}
+.message-user {
+  display: flex;
+  justify-content: flex-end;
+}
+.message-ai {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Input Textarea */
+.input-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  resize: none;
+  outline: none;
+  max-height: 120px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  color: #4A4A3E;
+  letter-spacing: 0.02em;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.input-textarea:focus {
+  border-bottom-color: rgba(143, 169, 143, 0.4);
+}
+.input-textarea::placeholder {
+  color: #B0ACA4;
+}
+
+/* Send Button */
+.send-button {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.25);
+  transition: all 500ms ease;
+  flex-shrink: 0;
+}
+.send-button.active {
+  background: #8FA98F;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+}
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.3;
+  margin-bottom: 24px;
+}
+.empty-title {
+  font-size: 18px;
+  font-weight: 300;
+  color: #5A5A52;
+  margin-bottom: 12px;
+}
+.empty-text {
+  font-size: 14px;
+  font-weight: 300;
+  color: #8A8A7E;
+  line-height: 1.7;
 }
 </style>

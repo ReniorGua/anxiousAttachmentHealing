@@ -35,23 +35,34 @@ const staticRoutes: RouteRecordRaw[] = [
 export const dynamicRoutes: RouteRecordRaw[] = [
   {
     path: '/',
+    name: 'Home',
+    component: () => import('@/views/home/HomeView.vue'),
+    meta: { title: '松间心舍' },
+  },
+  {
+    path: '/chat',
     name: 'Main',
     component: MainLayout,
-    redirect: '/chat',
     children: [
       {
-        path: 'chat',
+        path: '',
         name: 'AIChat',
         component: () => import('@/views/ai/AIChatView.vue'),
-        meta: { title: '疗心舍' },
-      },
-      {
-        path: 'memory',
-        name: 'MemoryTimeline',
-        component: () => import('@/views/dashboard/MemoryTimeline.vue'),
-        meta: { title: '成长年轮' },
+        meta: { title: '松间心舍' },
       },
     ],
+  },
+  {
+    path: '/chat/memory',
+    name: 'MemoryTimeline',
+    component: () => import('@/views/dashboard/MemoryTimeline.vue'),
+    meta: { title: '成长年轮' },
+  },
+  {
+    path: '/practice',
+    name: 'PracticeSpace',
+    component: () => import('@/views/practice/PracticeSpaceView.vue'),
+    meta: { title: '疗愈岛屿' },
   },
 ]
 
@@ -67,7 +78,7 @@ router.beforeEach(async (to, from, next) => {
   // Set page title
   document.title = to.meta.title
     ? `${to.meta.title}`
-    : '疗心舍'
+    : '松间心舍'
 
   next()
 })

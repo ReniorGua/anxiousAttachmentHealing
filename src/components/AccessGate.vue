@@ -4,7 +4,7 @@
       <div class="gate-icon">
         <span>✿</span>
       </div>
-      <h1 class="gate-title">疗心舍</h1>
+      <h1 class="gate-title">松间心舍</h1>
       <p class="gate-subtitle">请输入访问暗号</p>
 
       <form @submit.prevent="handleVerify" class="gate-form">
