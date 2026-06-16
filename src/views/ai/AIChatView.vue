@@ -621,7 +621,7 @@ p {
 .nav-icon-btn {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -641,7 +641,7 @@ p {
   left: 16px;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -702,10 +702,14 @@ p {
   color: rgba(0, 0, 0, 0.25);
   transition: all 500ms ease;
   flex-shrink: 0;
+  cursor: pointer;
 }
 .send-button.active {
   background: #8FA98F;
   color: rgba(255, 255, 255, 0.9);
+}
+.send-button:active {
+  transform: scale(0.92);
 }
 
 /* Empty State */

@@ -69,6 +69,8 @@ import InnerChild from '@/views/ai/components/InnerChild.vue'
 import EnergyRetraction from '@/views/ai/components/EnergyRetraction.vue'
 import SecurityCard from '@/views/ai/SecurityCard.vue'
 import WaitingTimer from '@/views/ai/WaitingTimer.vue'
+import ThirtyDaysAffirmation from './components/ThirtyDaysAffirmation.vue'
+import { useUserMemoryStore } from '@/stores/userMemory'
 
 interface PracticeCard {
   id: string
@@ -80,6 +82,17 @@ interface PracticeCard {
 }
 
 const practiceCards: PracticeCard[] = [
+  {
+    id: 'affirmation30',
+    title: '三十天自我重塑',
+    description: '用三十句话，拼凑出一个更强大、更稳固的你',
+    icon: '🌱',
+    cardStyle: {
+      background: 'linear-gradient(135deg, rgba(143,169,143,0.14), rgba(143,169,143,0.07))',
+      borderColor: 'rgba(143,169,143,0.18)'
+    },
+    component: ThirtyDaysAffirmation
+  },
   {
     id: 'breathing',
     title: '4-7-8 呼吸急救',
@@ -183,6 +196,7 @@ const practiceCards: PracticeCard[] = [
 
 const activePractice = ref<PracticeCard | null>(null)
 const showCompletionMessage = ref(false)
+const userMemoryStore = useUserMemoryStore()
 
 const getComponentProps = (cardId: string) => {
   if (cardId === 'listWriting') {
@@ -210,7 +224,12 @@ const handleOverlayClick = (e: MouseEvent) => {
   }
 }
 
-const handleComplete = () => {
+const handleComplete = (event: { completed?: boolean; content?: string }) => {
+  if (event.content) {
+    userMemoryStore.addMilestone(`清单书写：${event.content.split('\n').slice(0, 3).join('、')}`, 'self_soothing')
+  } else {
+    userMemoryStore.addMilestone('完成了清单书写练习', 'self_soothing')
+  }
   showCompletionMessage.value = true
   setTimeout(() => {
     closePractice()
@@ -237,7 +256,7 @@ const handleComplete = () => {
 .nav-icon-btn {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -258,7 +277,7 @@ const handleComplete = () => {
   left: 16px;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -322,6 +341,11 @@ const handleComplete = () => {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
 }
 
+.practice-card:active {
+  transform: translateY(-2px) scale(0.98);
+  transition-duration: 150ms;
+}
+
 .card-icon {
   font-size: 36px;
   margin-bottom: 16px;
@@ -374,7 +398,7 @@ const handleComplete = () => {
   right: 16px;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 9999px;
   border: none;
   background: rgba(0, 0, 0, 0.04);
   color: #8A8A7E;

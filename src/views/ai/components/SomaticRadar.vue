@@ -14,7 +14,7 @@
     <div class="flex justify-center gap-4">
       <button
         @click="handleComplete"
-        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light opacity-60 hover:opacity-80 transition-opacity"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light opacity-60 hover:opacity-80 transition-all active:scale-95 active:opacity-100"
         style="background: rgba(143,169,143,0.15); color: #5A5A52;"
       >
         我感受到了

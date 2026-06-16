@@ -39,6 +39,15 @@ export interface SelfSoothingEffortRecord {
   recognized?: boolean  // 是否已被 AI 认可
 }
 
+/**
+ * 三十天肯定练习记录
+ */
+export interface AffirmationRecord {
+  id: string
+  content: string
+  timestamp: number
+}
+
 const STORAGE_KEY = 'user_memory'
 const ANONYMOUS_UID_KEY = 'anonymous_uid'
 
@@ -59,6 +68,7 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
   const milestones = ref<MilestoneRecord[]>([])
   const triggers = ref<TriggerRecord[]>([])       // 焦虑触发点
   const selfSoothingEfforts = ref<SelfSoothingEffortRecord[]>([])  // 自我安抚努力
+  const affirmations = ref<AffirmationRecord[]>([])  // 三十天肯定练习
   const isLoaded = ref(false)
 
   // =====================================================
@@ -74,6 +84,7 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
         milestones.value = data.milestones || []
         triggers.value = data.triggers || []
         selfSoothingEfforts.value = data.selfSoothingEfforts || []
+        affirmations.value = data.affirmations || []
       }
       isLoaded.value = true
       console.log('[UserMemory] Loaded from localStorage:', {
@@ -81,6 +92,7 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
         milestones: milestones.value.length,
         triggers: triggers.value.length,
         efforts: selfSoothingEfforts.value.length,
+        affirmations: affirmations.value.length,
       })
     } catch (e) {
       console.error('[UserMemory] Load failed:', e)
@@ -97,6 +109,7 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
         milestones: milestones.value,
         triggers: triggers.value,
         selfSoothingEfforts: selfSoothingEfforts.value,
+        affirmations: affirmations.value,
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
     } catch (e) {
@@ -428,6 +441,34 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
     return newRecord
   }
 
+  function addAffirmation(content: string): AffirmationRecord {
+    const newRecord: AffirmationRecord = {
+      id: generateId(),
+      content,
+      timestamp: Date.now(),
+    }
+    affirmations.value.unshift(newRecord)
+    saveToStorage()
+
+    pushRecord({
+      id: newRecord.id,
+      anonymous_uid: getAnonymousUid(),
+      memory_type: 'milestone',
+      content,
+      timestamp: newRecord.timestamp,
+      metadata: { type: 'self_soothing', source: 'affirmation_30days' },
+    })
+
+    // Check if just completed 30 days
+    if (affirmations.value.length === 30) {
+      // Add special achievement milestone
+      addMilestone('三十天自我重塑练习', 'breakthrough')
+      console.log('[UserMemory] 🎉 Achieved 30-day affirmation milestone!')
+    }
+
+    return newRecord
+  }
+
   // =====================================================
   // Context Summary (for AI injection)
   // =====================================================
@@ -464,6 +505,7 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
     milestones,
     triggers,
     selfSoothingEfforts,
+    affirmations,
     isLoaded,
     loadFromStorage,
     saveToStorage,
@@ -472,6 +514,7 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
     addMilestone,
     addTrigger,
     addSelfSoothingEffort,
+    addAffirmation,
     getContextSummary,
     syncFromSupabase,
     pushAllToSupabase,

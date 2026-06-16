@@ -7,7 +7,7 @@
         <div
           v-if="!isRevealed"
           key="front"
-          class="flex flex-col items-center justify-center p-8 rounded-lg cursor-pointer"
+          class="flex flex-col items-center justify-center p-8 rounded-lg cursor-pointer transition-transform active:scale-[0.97]"
           :style="{ backgroundColor: currentColor }"
           @click="handleReveal"
         >

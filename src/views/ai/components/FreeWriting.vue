@@ -25,14 +25,14 @@
     <div class="flex justify-center gap-6">
       <button
         @click="handleSave"
-        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light opacity-50 hover:opacity-70 transition-opacity"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light opacity-50 hover:opacity-70 transition-all active:scale-95 active:opacity-100"
         style="color: #5A5A52;"
       >
         保留在我的时光盒
       </button>
       <button
         @click="handleBurn"
-        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light opacity-50 hover:opacity-70 transition-opacity"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light opacity-50 hover:opacity-70 transition-all active:scale-95 active:opacity-100"
         style="color: #5A5A52;"
       >
         将这些烦恼焚毁

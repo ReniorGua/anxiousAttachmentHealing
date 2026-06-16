@@ -33,14 +33,14 @@
     <div class="flex justify-center gap-4">
       <button
         @click="togglePause"
-        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light rounded-none transition-all duration-700 opacity-60 hover:opacity-80"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light rounded-none transition-all duration-700 opacity-60 hover:opacity-80 active:scale-95 active:opacity-100"
         style="background-color: rgba(0,0,0,0.04); color: #5A5A52;"
       >
         {{ isPaused ? '继续' : '暂停' }}
       </button>
       <button
         @click="reset"
-        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light rounded-none border-b transition-all duration-700 opacity-30 hover:opacity-60"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light rounded-none border-b transition-all duration-700 opacity-30 hover:opacity-60 active:scale-95 active:opacity-100"
         style="border-color: rgba(0,0,0,0.1); color: #5A5A52;"
       >
         重置

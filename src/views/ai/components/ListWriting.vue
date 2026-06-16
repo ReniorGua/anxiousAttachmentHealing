@@ -45,12 +45,16 @@
     <div class="flex justify-center">
       <button
         @click="handleComplete"
-        :disabled="listItems.length === 0"
-        class="min-h-[44px] px-8 py-2 text-xs tracking-widest font-light transition-all"
-        :class="listItems.length === 0 ? 'opacity-30 cursor-not-allowed' : 'opacity-60 hover:opacity-80'"
-        style="background-color: rgba(143,169,143,0.15); color: #5A5A52;"
+        class="min-h-[44px] px-8 py-2 text-xs tracking-widest font-light transition-all active:scale-95"
+        :style="{
+          backgroundColor: 'rgba(143,169,143,0.15)',
+          color: '#5A5A52',
+          opacity: isSubmitting ? 0.6 : (listItems.length === 0 ? 0.45 : 0.65),
+        }"
+        :disabled="isSubmitting"
       >
-        封存我的清单
+        <span v-if="isSubmitting">封存中...</span>
+        <span v-else>封存我的清单</span>
       </button>
     </div>
   </div>
@@ -69,6 +73,7 @@ const emit = defineEmits<{
 
 const listItems = ref<string[]>([])
 const currentInput = ref('')
+const isSubmitting = ref(false)
 
 const guideText = computed(() => {
   const guides: Record<string, string> = {
@@ -94,8 +99,11 @@ const removeItem = (index: number) => {
 }
 
 const handleComplete = () => {
-  if (listItems.value.length > 0) {
-    emit('complete', { completed: true, content: listItems.value.join('\n') })
-  }
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+  emit('complete', { completed: true, content: listItems.value.join('\n') })
+  setTimeout(() => {
+    isSubmitting.value = false
+  }, 1000)
 }
 </script>

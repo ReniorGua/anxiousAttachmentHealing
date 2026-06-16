@@ -40,19 +40,29 @@
             v-for="(milestone, index) in sortedMilestones"
             :key="milestone.id"
             class="timeline-entry"
+            :class="{ 'is-achievement': isThirtyDayAffirmation(milestone) }"
           >
             <!-- Dot -->
-            <div class="entry-dot">
+            <div class="entry-dot" :class="{ 'dot-achievement': isThirtyDayAffirmation(milestone) }">
               <span class="dot-icon">{{ getDotIcon(milestone.type) }}</span>
             </div>
 
             <!-- Content -->
-            <div class="entry-content">
+            <div class="entry-content" :class="{ 'content-achievement': isThirtyDayAffirmation(milestone) }">
               <p class="entry-date">{{ formatDate(milestone.timestamp) }}</p>
               <p class="entry-text">{{ milestone.content }}</p>
-              <span class="entry-tag" :style="{ backgroundColor: getTagBg(milestone.type), color: getTagColor(milestone.type) }">
+              <span
+                v-if="!isThirtyDayAffirmation(milestone)"
+                class="entry-tag"
+                :style="{ backgroundColor: getTagBg(milestone.type), color: getTagColor(milestone.type) }"
+              >
                 {{ getTypeLabel(milestone.type) }}
               </span>
+              <!-- Achievement special highlight -->
+              <div v-else class="achievement-highlight">
+                <span class="achievement-icon">🍂</span>
+                <p class="achievement-label">你已经用三十句话，为自己重新浇灌出了一片绿洲。</p>
+              </div>
             </div>
           </div>
         </div>
@@ -130,6 +140,11 @@ const getTypeLabel = (type: MilestoneRecord['type']): string => {
   }
   return labels[type] || '记录'
 }
+
+// Detect 30-day affirmation achievement milestone
+const isThirtyDayAffirmation = (milestone: MilestoneRecord): boolean => {
+  return milestone.content === '三十天自我重塑练习' && milestone.type === 'breakthrough'
+}
 </script>
 
 <style scoped>
@@ -151,7 +166,7 @@ const getTypeLabel = (type: MilestoneRecord['type']): string => {
 .nav-icon-btn {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -172,7 +187,7 @@ const getTypeLabel = (type: MilestoneRecord['type']): string => {
   left: 16px;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -271,7 +286,7 @@ const getTypeLabel = (type: MilestoneRecord['type']): string => {
   top: 0;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: 9999px;
   background: rgba(143, 169, 143, 0.15);
   display: flex;
   align-items: center;
@@ -325,5 +340,38 @@ const getTypeLabel = (type: MilestoneRecord['type']): string => {
   font-weight: 300;
   color: rgba(143,169,143,0.5);
   letter-spacing: 0.05em;
+}
+
+/* Achievement Entry */
+.timeline-entry.is-achievement .entry-dot {
+  background: rgba(180, 160, 100, 0.2);
+}
+.timeline-entry.is-achievement .dot-icon {
+  color: #B4A078;
+}
+.timeline-entry.is-achievement .entry-content {
+  background: linear-gradient(135deg, rgba(200, 185, 140, 0.1), rgba(180, 165, 120, 0.06));
+  border: 1px solid rgba(180, 165, 120, 0.15);
+}
+
+.achievement-highlight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: rgba(200, 185, 140, 0.08);
+  border-radius: 10px;
+}
+.achievement-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.achievement-label {
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.7;
+  color: #8A7A5A;
+  letter-spacing: 0.02em;
 }
 </style>

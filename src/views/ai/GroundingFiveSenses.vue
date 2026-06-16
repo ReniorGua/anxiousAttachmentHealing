@@ -79,7 +79,7 @@
       <button
         v-if="currentStep > 0"
         @click="prevStep"
-        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light transition-all duration-700 opacity-60 hover:opacity-100"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light transition-all duration-700 opacity-60 hover:opacity-100 active:scale-95"
         :style="secondaryButtonStyle"
       >
         上一步
@@ -88,7 +88,7 @@
       <button
         v-if="currentStep < steps.length - 1 && isCurrentStepComplete"
         @click="nextStep"
-        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light text-white transition-all duration-700 hover:opacity-80"
+        class="min-h-[44px] px-6 py-2 text-xs tracking-widest font-light text-white transition-all duration-700 hover:opacity-80 active:scale-95 active:opacity-100"
         :style="primaryButtonStyle"
       >
         继续
@@ -97,7 +97,7 @@
       <button
         v-if="currentStep === steps.length - 1 && isCurrentStepComplete"
         @click="handleComplete"
-        class="min-h-[44px] px-8 py-2 text-xs tracking-widest font-light text-white transition-all duration-700 hover:opacity-80"
+        class="min-h-[44px] px-8 py-2 text-xs tracking-widest font-light text-white transition-all duration-700 hover:opacity-80 active:scale-95 active:opacity-100"
         :style="primaryButtonStyle"
       >
         完成练习

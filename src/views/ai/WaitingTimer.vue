@@ -63,7 +63,7 @@
         <button
           v-if="!isRunning"
           @click="startTimer"
-          class="min-h-[44px] px-8 py-2.5 text-xs tracking-widest font-light transition-all duration-700 opacity-70 hover:opacity-100"
+          class="min-h-[44px] px-8 py-2.5 text-xs tracking-widest font-light transition-all duration-700 opacity-70 hover:opacity-100 active:scale-95 active:opacity-100"
           :style="{ backgroundColor: primaryColor, color: '#5A5A52' }"
         >
           开始
@@ -72,7 +72,7 @@
         <button
           v-else
           @click="pauseTimer"
-          class="min-h-[44px] px-8 py-2.5 text-xs tracking-widest font-light transition-all duration-700 opacity-70 hover:opacity-100"
+          class="min-h-[44px] px-8 py-2.5 text-xs tracking-widest font-light transition-all duration-700 opacity-70 hover:opacity-100 active:scale-95 active:opacity-100"
           :style="{ backgroundColor: secondaryColor, color: '#5A5A52' }"
         >
           暂停
@@ -81,7 +81,7 @@
         <button
           v-if="hasStarted"
           @click="resetTimer"
-          class="min-h-[44px] px-6 py-2.5 text-xs tracking-widest font-light border-b opacity-40 hover:opacity-80 transition-all duration-700"
+          class="min-h-[44px] px-6 py-2.5 text-xs tracking-widest font-light border-b opacity-40 hover:opacity-80 transition-all duration-700 active:scale-95 active:opacity-100"
           :style="{ borderColor: 'rgba(0,0,0,0.15)', color: textColor }"
         >
           重置
