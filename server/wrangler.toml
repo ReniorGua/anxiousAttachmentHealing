@@ -2,12 +2,24 @@ name = "healing-backend"
 main = "index.js"
 compatibility_date = "2026-05-03"
 
-[vars]
-ALLOWED_ORIGINS = "*"
+# ==========================================
+# 告诉 Wrangler：这个域名是我的，别给我删了！
+# ==========================================
+routes = [
+  { pattern = "api.healing-rest-return.cyou", custom_domain = true }
+]
 
-# 环境变量在 Cloudflare Dashboard Workers Settings 中配置更安全
+[vars]
+# ==========================================
+# 1. 普通非敏感变量
+# ==========================================
+ALLOWED_ORIGINS = "*"
+DASHSCOPE_MODEL = "qwen3.6-plus"
+
+# ==========================================
+# 2. 敏感机密 (Secrets)
+# ==========================================
+# 线上部署：请在终端使用 `npx wrangler secret put 变量名` 进行设置。
+# 本地开发：请把它们写在 server/.dev.vars 文件里。
 # DASHSCOPE_API_KEY=sk-xxx
-# DASHSCOPE_MODEL=qwen-plus
-# ACCESS_CODE=你春天时相信的那句话
-# UPSTASH_REDIS_REST_URL=xxx
-# UPSTASH_REDIS_REST_TOKEN=xxx
+# ACCESS_CODE=xxx
