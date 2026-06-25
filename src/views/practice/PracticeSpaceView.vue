@@ -52,9 +52,6 @@
           :style="card.cardStyle"
           @click="openPractice(card)"
         >
-          <!-- Card header bar (deep cards only) -->
-          <div v-if="card.sceneWeight === 'deep'" class="card-spine"></div>
-
           <div class="card-body">
             <div class="card-icon">{{ card.icon }}</div>
             <h3 class="card-title">{{ card.title }}</h3>
@@ -517,7 +514,7 @@ const handleComplete = (event: { completed?: boolean; content?: string }) => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 /* ─── Cards ─── */
@@ -528,11 +525,15 @@ const handleComplete = (event: { completed?: boolean; content?: string }) => {
   transition: all 600ms cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  height: 160px;
 }
 
 .practice-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.07);
+  box-shadow: 0 20px 56px rgba(0,0,0,0.09);
 }
 
 .practice-card:active {
@@ -540,71 +541,27 @@ const handleComplete = (event: { completed?: boolean; content?: string }) => {
   transition-duration: 120ms;
 }
 
-/* Light cards — compact, airy */
-.practice-card.light {
-  padding: 24px 20px 20px;
-}
-
-.practice-card.light .card-body {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.practice-card.light .card-icon {
-  font-size: 28px;
-  margin-bottom: 4px;
-}
-
-.practice-card.light .card-title {
-  font-size: 14px;
-}
-
-.practice-card.light .card-description {
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-/* Deep cards — journal/notebook feel, more presence */
-.practice-card.deep {
-  padding: 0 0 4px;
-  border-radius: 18px;
-}
-
-.practice-card.deep .card-spine {
-  height: 4px;
-  width: 100%;
-  border-radius: 18px 18px 0 0;
-  background: linear-gradient(to right, rgba(200,190,175,0.35), rgba(190,180,165,0.2));
-  margin-bottom: 20px;
-}
-
-.practice-card.deep .card-body {
-  padding: 0 22px;
+.practice-card .card-body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
+  flex: 1;
 }
 
-.practice-card.deep .card-icon {
+.practice-card .card-icon {
   font-size: 32px;
   margin-bottom: 4px;
 }
 
-.practice-card.deep .card-title {
+.practice-card .card-title {
   font-size: 15px;
   letter-spacing: 0.1em;
 }
 
-.practice-card.deep .card-description {
+.practice-card .card-description {
   font-size: 12.5px;
   line-height: 1.75;
-}
-
-.practice-card.deep:hover {
-  box-shadow: 0 20px 56px rgba(0,0,0,0.09);
 }
 
 /* ─── Card Typography ─── */
