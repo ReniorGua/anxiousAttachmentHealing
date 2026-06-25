@@ -13,14 +13,28 @@ import { Redis } from '@upstash/redis'
 // Initialize Hono app
 const app = new Hono()
 
-// CORS middleware - Cloudflare Workers compatible
+// 1. 终极 CORS 中间件配置
 app.use('*', cors({
   origin: (origin) => origin || '*',
-  allowHeaders: ['Content-Type', 'X-Access-Code'],
-  allowMethods: ['POST', 'GET', 'OPTIONS'],
+  // 必须把前端可能带上的所有 Header 都放行
+  allowHeaders: ['Content-Type', 'X-Access-Code', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'Cache-Control'],
+  allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
   credentials: true,
   maxAge: 86400,
 }))
+
+// 2. 强制接管所有 OPTIONS 预检请求（解决浏览器顽固跨域拦截）
+app.options('*', (c) => c.text('', 204))
+
+// 3. 全局 404 侦探：如果前端路径写错，清楚地告诉前端错在哪
+app.notFound((c) => {
+  console.warn(`[404 Not Found] Requested path: ${c.req.path}`)
+  return c.json({
+    error: 'Not Found',
+    message: '接口路径不存在，请检查前端请求地址',
+    requestedPath: c.req.path
+  }, 404)
+})
 
 // Tool definitions for DashScope Function Calling
 const TOOLS = [
