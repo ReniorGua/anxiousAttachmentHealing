@@ -17,8 +17,6 @@ import { useGlobalStore } from './stores/global'
 import { useAIChatStore } from './stores/aiChat'
 import { useUserMemoryStore } from './stores/userMemory'
 
-// Import memory quenching service (silent background service)
-import { startMemoryQuenching } from './services/memoryQuenching'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -37,7 +35,9 @@ globalStore.initFromStorage()
 userMemoryStore.loadFromStorage()
 aiChatStore.loadFromStorage()
 
-// Start memory quenching service (silent background)
-startMemoryQuenching()
+// Initialize access_code in localStorage from env if not already set
+if (!localStorage.getItem('access_code') && import.meta.env.VITE_ACCESS_CODE) {
+  localStorage.setItem('access_code', import.meta.env.VITE_ACCESS_CODE)
+}
 
 app.mount('#app')

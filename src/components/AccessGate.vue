@@ -89,6 +89,7 @@ onMounted(async () => {
 async function handleVerify() {
   if (inputCode.value.trim() === ACCESS_CODE) {
     localStorage.setItem('access_verified', '1')
+    localStorage.setItem('access_code', inputCode.value.trim())
 
     // Sync to Supabase
     if (isSupabaseConfigured()) {

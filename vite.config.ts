@@ -70,9 +70,14 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       port: Number(env.VITE_PORT) || 5173,
       host: true,
       proxy: {
+        // Chat stream proxy - uses VITE_BACKEND_API_URL
+        '/api/chat': {
+          target: env.VITE_BACKEND_API_URL || 'http://127.0.0.1:8787',
+          changeOrigin: true,
+        },
         // Backend AI API proxy (optional - frontend can call backend directly)
         '/api/ai': {
-          target: env.VITE_BACKEND_API_URL || 'http://localhost:3000',
+          target: env.VITE_BACKEND_API_URL || 'http://127.0.0.1:8787',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/ai/, ''),
         },

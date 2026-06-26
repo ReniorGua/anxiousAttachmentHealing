@@ -7,8 +7,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { stream } from 'hono/streaming'
-import { Ratelimit } from '@upstash/ratelimit'
-import { Redis } from '@upstash/redis'
 
 // Initialize Hono app
 const app = new Hono()
@@ -38,33 +36,28 @@ app.notFound((c) => {
 
 // Tool definitions for DashScope Function Calling
 const TOOLS = [
+  // ================= 一、 🌪️ 恐慌与焦躁 (panic) =================
   {
     type: 'function',
     function: {
-      name: 'trigger_478_breathing',
-      description: '当用户表达急性生理恐慌、心悸、发慌、呼吸急促、感觉要失控时调用。这是最高优先级的生理急救。',
+      name: 'trigger_grounding_five_senses',
+      description: '当用户脑子停不下来、反复想一件事、焦虑蔓延、思维反刍时调用。',
       parameters: {
         type: 'object',
-        properties: {
-          intensity: { type: 'number', description: '恐慌强度 1-10，10为最强烈' },
-          symptom: { type: 'string', description: '主要躯体症状描述' }
-        },
-        required: ['intensity']
+        properties: { reason: { type: 'string', description: '简述用户的焦虑蔓延表现' } },
+        required: ['reason']
       }
     }
   },
   {
     type: 'function',
     function: {
-      name: 'trigger_energy_retraction',
-      description: '当用户表现出极度渴望对方回复、想发连环信息、想查岗、注意力被他人完全吸走、能量向外强迫性耗散时调用。',
+      name: 'trigger_478_breathing',
+      description: '当用户表达心悸、心跳快、喘不过气、惊恐、感觉要疯了或大脑空白时调用。',
       parameters: {
         type: 'object',
-        properties: {
-          behavior: { type: 'string', description: '用户描述的冲动行为' },
-          desperation: { type: 'number', description: '冲动强度 1-10' }
-        },
-        required: ['behavior', 'desperation']
+        properties: { reason: { type: 'string', description: '简述用户的急性生理恐慌症状' } },
+        required: ['reason']
       }
     }
   },
@@ -72,89 +65,11 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'trigger_somatic_radar',
-      description: '当用户表达情绪难以言表，但伴随胸口堵、胃部翻腾、身体发紧等躯体化症状时调用。',
+      description: '当用户感到胸口堵、胃部翻腾、身体发紧、浑身难受等躯体化症状时调用。',
       parameters: {
         type: 'object',
-        properties: {
-          location: { type: 'string', description: '身体不适的部位' },
-          sensation: { type: 'string', description: '感觉描述（如：紧绷、翻腾、发麻、沉重）' }
-        },
-        required: ['location', 'sensation']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_inner_child',
-      description: '当用户流露被抛弃感、深层的自我厌恶、觉得自己不配被爱、像个无助的孤儿时调用。',
-      parameters: {
-        type: 'object',
-        properties: {
-          woundType: { type: 'string', description: '创伤类型：abandonment|rejection|shame|helplessness' },
-          age: { type: 'number', description: '被触发的内在小孩年龄（估计）' }
-        },
-        required: ['woundType']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_affirmation_echo',
-      description: '当用户陷入自我怀疑、觉得自己不配、或者表达了微弱的自我期许时调用。引导用户进入高频的赞同与回声肯定练习。',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_belief_transformation',
-      description: '当用户表达深层的自我否定、反复自我惩罚、或陷入"我不够好"的死循环时调用。引导用户进行认知翻转练习：用一句自我肯定反驳负面"个人律法"。',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_resistance_exhaustion',
-      description: '当用户表达出极强的自我防御、对积极的建议疯狂找借口反驳、或者处于"道理我都懂但做不到"的内耗状态时调用。',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_deep_release',
-      description: '当用户表达长期的自我设限、深受过去负面信念折磨、或者透露出有着深沉的秘密、难以启齿的隐私压力时调用。引导用户进入信念解绑或阅后即焚练习。',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_future_vision',
-      description: '当用户感到人生迷茫、失去方向、觉得生活没有盼头、或者想要重新规划未来寻找动力时调用。引导用户进入从五年到三十天的愿景拆解练习。',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: []
+        properties: { reason: { type: 'string', description: '简述用户的躯体不适感' } },
+        required: ['reason']
       }
     }
   },
@@ -162,39 +77,89 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'trigger_waiting_timer',
-      description: '当用户处于被动地"等待消息"的煎熬中或者想要做一些冲动的行为时调用。',
+      description: '当用户在等待消息、坐立不安、忍不住想看手机、想连环发信息或有冲动行为前调用。',
       parameters: {
         type: 'object',
-        properties: {
-          anxietyLevel: { type: 'number', description: '等待煎熬强度 1-10' }
-        },
-        required: ['anxietyLevel']
+        properties: { reason: { type: 'string', description: '简述用户正在焦急等待或想冲动做的事' } },
+        required: ['reason']
       }
     }
   },
   {
     type: 'function',
     function: {
-      name: 'trigger_grounding_five_senses',
-      description: '当用户陷入反复的思维反刍、反复地回想起消极的事情、注意力总是放在一件消极的事情上时调用。',
+      name: 'trigger_energy_retraction',
+      description: '当用户能量耗散、被别人吸走、强迫性刷动态、查岗、感觉控制不住自己时调用。',
       parameters: {
         type: 'object',
-        properties: {
-          confusionLevel: { type: 'number', description: '思维混乱程度 1-10' }
-        },
-        required: ['confusionLevel']
+        properties: { reason: { type: 'string', description: '简述用户向外耗散精力的行为' } },
+        required: ['reason']
       }
     }
   },
+
+  // ================= 二、 🥀 疲惫与内耗 (chaos) =================
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_inner_child',
+      description: '当用户觉得自己没人要、被抛弃、不配、充满羞耻感、绝望或感到极度无助时调用。',
+      parameters: {
+        type: 'object',
+        properties: { reason: { type: 'string', description: '简述用户深层无助与羞耻的来源' } },
+        required: ['reason']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_affirmation_echo',
+      description: '当用户觉得自己不值得、没价值、不够好、陷入自我否定、无法相信自己能改变时调用。',
+      parameters: {
+        type: 'object',
+        properties: { reason: { type: 'string', description: '简述用户的自我否定语句' } },
+        required: ['reason']
+      }
+    }
+  },
+
+  // ================= 三、 🧠 脑子很乱 (rumination) =================
   {
     type: 'function',
     function: {
       name: 'trigger_fear_release',
-      description: '当用户表达具体的担忧、害怕未来、害怕失败、或被未知恐惧裹挟时调用。引导用户进入恐惧书写练习。',
+      description: '当用户表达害怕失败、担心未来、恐惧未知、不敢迈步时调用。',
       parameters: {
         type: 'object',
-        properties: {},
-        required: []
+        properties: { reason: { type: 'string', description: '简述用户当前面临的具体恐惧' } },
+        required: ['reason']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_resistance_exhaustion',
+      description: '当用户防御心很强、找借口、表示“道理都懂但做不到”、深陷内耗与阻抗时调用。',
+      parameters: {
+        type: 'object',
+        properties: { reason: { type: 'string', description: '简述用户的阻抗表现或借口' } },
+        required: ['reason']
+      }
+    }
+  },
+
+  // ================= 四、 🌱 深度重塑 (deep) =================
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_affirmation_30',
+      description: '当用户表达缺乏稳定感、自我信任不足、想要寻求长期成长与内心稳固时调用。',
+      parameters: {
+        type: 'object',
+        properties: { reason: { type: 'string', description: '简述用户渴望建立自我信任的诉求' } },
+        required: ['reason']
       }
     }
   },
@@ -202,11 +167,11 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'trigger_personal_law',
-      description: '当用户反复表达深度的自我怀疑、觉得自己一无是处、或者陷入某种死循环的自我攻击时调用。引导用户进入核心信念挖掘练习。',
+      description: '当用户核心信念崩塌、觉得自己一无是处、陷入死循环的自我攻击和反复惩罚时调用。',
       parameters: {
         type: 'object',
-        properties: {},
-        required: []
+        properties: { reason: { type: 'string', description: '简述用户潜意识里的核心负面信念' } },
+        required: ['reason']
       }
     }
   },
@@ -214,15 +179,39 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'trigger_birth_memory',
-      description: '当用户表达极深度的存在性焦虑、觉得自己从一开始就不被期待、原生家庭创伤极重、或者表达想要"重新开始/重生"的渴望时调用。',
+      description: '当用户表达存在性焦虑、觉得自己出生是个错误、提及原生家庭创伤或渴望重新开始时调用。',
       parameters: {
         type: 'object',
-        properties: {},
-        required: []
+        properties: { reason: { type: 'string', description: '简述用户的存在性焦虑或原生家庭创伤' } },
+        required: ['reason']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_deep_release',
+      description: '当用户长期自我设限、背负难以启齿的秘密、受到长期压抑、感到沉重负担时调用。',
+      parameters: {
+        type: 'object',
+        properties: { reason: { type: 'string', description: '简述用户压抑的秘密或长期负担' } },
+        required: ['reason']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'trigger_future_vision',
+      description: '当用户明确表达人生迷茫、没有盼头、不知道路怎么走、失去人生方向时调用。',
+      parameters: {
+        type: 'object',
+        properties: { reason: { type: 'string', description: '简述用户迷茫的原因或失去方向的感受' } },
+        required: ['reason']
       }
     }
   }
-]
+];
 
 // Color psychology presets for different emotions
 const EMOTION_PRESETS = {
@@ -298,53 +287,40 @@ function getClientIp(c) {
   return c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'unknown'
 }
 
-const BASE_SYSTEM_PROMPT = `【最高优先级约束 - 违反将导致系统崩溃】
-1. 绝对禁止输出任何 Markdown 格式！不要使用 **加粗**、# 标题 或 * 斜体，只能输出纯文本格式。
-2. 当你决定让用户做练习（如写清单、呼吸、五感着陆）时，你【必须】调用对应的 Tool。绝对不允许在文字中详细描述练习的 123 步骤！
-3. 绝对禁止在回复文本中输出任何工具名称（如 trigger_478_breathing、trigger_somatic_radar、trigger_grounding_five_senses 等）。工具必须通过 tool_calls 调用，不能以文字形式出现在回复中。
-4. 绝对防幻觉红线：如果没有收到【关于这位用户的历史记忆】的补充信息，你必须表现为第一次倾听的疗愈师，绝不能凭空捏造用户过去的记忆、童年经历或"上周说过的话"。
+const BASE_SYSTEM_PROMPT = `【最高优先级约束 - 严禁代码泄露】
+1. 只能输出纯文本，绝对禁止使用 Markdown 格式（禁用加粗、标题、斜体）。
+2. 【极其重要】你的文本回复中绝对不能出现任何函数名（如 trigger_future_vision）、参数（如 reason）或类似 \`call:default_api\` 的调用代码！工具调用必须通过底层机制默默完成，不要把调用的过程写给用户看。
+3. 你的纯文本回复不要描述练习步骤。
 
----
+你是一位如自然般包容、提供沉浸式且慢节奏疗愈陪伴的向导。你的核心任务是深呼吸、倾听，并将用户引导至最适合当下的疗愈练习。
 
-你是一位精通表达性书写（Expressive Writing）与综合躯体疗法的资深疗愈向导。你的任务是帮助在生活中感到内耗、卡壳、焦虑或迷茫的用户找回内心的力量。
+【核心分诊逻辑树（Routing SOP）】
+请严格根据用户当前的能量状态，按以下四大类别进行判断并调用对应的工具：
 
-**核心认知：**
-- 不要预设用户一定是处于恋爱或失恋中，他们可能面临的是职场压力、自我发展瓶颈、纯粹的情绪低谷、或对生活意义的探寻。
-- 用户来到这里是渴望被倾听、被理解，而非被诊断或被教育。
+一、 恐慌与焦躁 (Panic) - 急性爆发与失控
+- 心跳快/喘不过气/快要失控 -> 强制调用 trigger_478_breathing
+- 胸堵/胃翻腾/身体发紧等躯体症状 -> 强制调用 trigger_somatic_radar
+- 脑子停不下来/焦虑蔓延/反复想一件事 -> 强制调用 trigger_grounding_five_senses
+- 坐立不安/等待消息煎熬/想连环发信息 -> 强制调用 trigger_waiting_timer
+- 能量被他人吸走/强迫性刷动态/查岗 -> 强制调用 trigger_energy_retraction
 
-**【你的绝对第一要务是诊断与工具派发（Routing）】！你面前有十几种专业的疗愈卡片（Tools）。**
+二、 疲惫与内耗 (Chaos) - 自我价值受损
+- 绝望无助/觉得自己没人要/充满羞耻感 -> 强制调用 trigger_inner_child
+- 觉得自己没价值/不够好/深陷自我否定 -> 强制调用 trigger_affirmation_echo
 
-**核心准则：**
-1. 绝对自然：拒绝任何机械的客服模板。你的语言要像一位坐在对面的稳重老友，充满悲悯与凝视感。
-2. 工具调用规则：一旦决定调用某个工具，你的回复内容必须与工具匹配，不要提及你决定不调用的其他工具。
-3. 有机穿插：绝对不能只冷冰冰地扔出一个工具。你的回复流必须是：【先用温和的文字共情，接住情绪】 -> 【调用对应的 Tool】。
-4. 书写即疗愈：引导用户通过书写来整理思绪、清空大脑、找回力量——这是你与其他心理咨询流派最核心的区别。
-5. 熟悉布洛克小说一日课《为你的生活写作》、杰西卡·鲍姆《章鱼学会冷静》中的心理疗愈方法，并将这些方法内化为你的工具调用逻辑。
-6. **【强制分诊模式】**：只要用户表达了明确的负面情绪（迷茫、内耗、焦虑、恐慌、自我怀疑等），你【必须、必须、必须】立刻调用最匹配的一个 Tool！绝对不允许只用纯文本安慰用户！
-7. **【纯文本回复仅限场景】**：仅当用户只是简单打招呼、分享开心的日常、或者明确拒绝做练习时，才使用纯文本回复。
+三、 脑子很乱 (Rumination) - 对抗与恐惧
+- 恐惧未知/害怕失败/不敢迈出下一步 -> 强制调用 trigger_fear_release
+- 道理都懂但做不到/找借口/防御心极强 -> 强制调用 trigger_resistance_exhaustion
 
-**工具派发规则（严格按照优先级）：**
-- 急性生理恐慌（心悸、呼吸急促、感觉要失控、惊恐发作）→ trigger_478_breathing
-- 情绪难言但身体有反应（胸口堵、胃翻腾、身体发紧、喉咙发紧）→ trigger_somatic_radar
-- 反复思维反刍、脑子里停不下来、被消极事情占据 → trigger_grounding_five_senses
-- 被抛弃感、深层自我厌恶、觉得自己不配被爱、无助的孤儿感 → trigger_inner_child
-- 轻微自我怀疑、需要日常情感确认 → trigger_affirmation_echo
-- 深层的自我否定、死循环的"我不够好"、反复自我惩罚 → trigger_belief_transformation
-- 极强的自我防御、对积极建议疯狂找借口、"道理我都懂但做不到" → trigger_resistance_exhaustion
-- 长期自我设限、深层秘密/隐私压力、深陷过去负面信念 → trigger_deep_release
-- 人生迷茫、失去方向、觉得生活没有盼头、想要重新规划未来 → trigger_future_vision
-- 需要安静等待、需要暂停冲动行为 → trigger_waiting_timer
-- 极度渴望回复、冲动想查岗、能量完全外耗 → trigger_energy_retraction
+四、 深度重塑 (Deep) - 存在与未来规划
+- 表达人生迷茫/失去方向/没有盼头 -> 强制调用 trigger_future_vision
+- 缺乏稳定感/想要寻求长期的自我信任 -> 强制调用 trigger_affirmation_30
+- 觉得自己一无是处/陷入死循环的自我惩罚 -> 强制调用 trigger_personal_law
+- 存在性焦虑/原生家庭创伤/渴望重新开始 -> 强制调用 trigger_birth_memory
+- 长期被压抑/背负难以启齿的沉重秘密 -> 强制调用 trigger_deep_release
 
-**重要区分：**
-- 只有出现"心跳快、呼吸急促、胸闷、要疯了"时才用 trigger_478_breathing
-- 不要用断联、查岗等聚焦恋爱焦虑的规则，用户可能是任何背景
-
-【对话风格与共情原则】
-1. 你是一个"活在当下"的疗愈师。请永远只针对用户【刚刚输入的这一句话】进行极简共情，字数控制在30字以内。
-2. 只有在收到明确传入的【历史记忆】时，你才可以顺其自然地结合记忆进行共情。否则，绝对只讨论"此刻"的感受，不给自己加戏。
-3. 当你决定调用疗愈工具时，用一句过渡语接住情绪即可，立刻调用工具，把舞台留给界面组件。绝对不允许在文字里解释工具的用法或步骤。`
-
+对话流规则：
+仅当用户单纯打招呼、分享开心日常或明确拒绝练习时，才只使用纯文本回复。只要有上述情绪标签，强制调用工具！`
 /**
  * POST /api/chat
  * Non-streaming chat with DashScope
@@ -360,38 +336,6 @@ app.post('/api/chat', async (c) => {
       const clientCode = c.req.header('x-access-code')
       if (!clientCode || clientCode !== ACCESS_CODE) {
         return c.json({ error: 'Unauthorized', message: '访问暗号不正确' }, 401)
-      }
-    }
-
-    // Rate limiting - via Hono context env, NOT Redis.fromEnv()
-    const UPSTASH_REDIS_REST_URL = c.env.UPSTASH_REDIS_REST_URL
-    const UPSTASH_REDIS_REST_TOKEN = c.env.UPSTASH_REDIS_REST_TOKEN
-
-    if (UPSTASH_REDIS_REST_URL && UPSTASH_REDIS_REST_TOKEN) {
-      try {
-        const ratelimit = new Ratelimit({
-          redis: new Redis({ url: UPSTASH_REDIS_REST_URL, token: UPSTASH_REDIS_REST_TOKEN }),
-          limiter: Ratelimit.slidingWindow(10, '10 m'),
-          analytics: true,
-          prefix: '疗心舍_rate_limit',
-        })
-
-        const clientIp = getClientIp(c)
-        const { success, remaining, reset } = await ratelimit.limit(clientIp)
-
-        if (!success) {
-          const resetSeconds = Math.ceil((reset - Date.now()) / 1000)
-          return c.json({
-            error: 'Rate limit exceeded',
-            message: '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。',
-            retryAfter: resetSeconds,
-          }, 429, {
-            'X-RateLimit-Remaining': remaining.toString(),
-            'X-RateLimit-Reset': reset.toString()
-          })
-        }
-      } catch (rateLimitError) {
-        console.warn('[RateLimit] Upstash unavailable, skipping:', rateLimitError.message)
       }
     }
 
@@ -438,7 +382,8 @@ app.post('/api/chat', async (c) => {
             messages: [
               { role: 'system', content: mergedSystemPrompt },
               { role: 'user', content: message }
-            ]
+            ],
+            tools: TOOLS // <--- 【關鍵修復】：必須把工具列表傳給模型
           }),
           signal: fetchController.signal,
         }
@@ -508,7 +453,6 @@ app.post('/api/chat/stream', async (c) => {
   console.log(`[${requestId}] === STREAMING CHAT REQUEST ===`)
 
   try {
-    // Access code check
     const ACCESS_CODE = c.env.ACCESS_CODE
     if (ACCESS_CODE) {
       const clientCode = c.req.header('x-access-code')
@@ -517,7 +461,6 @@ app.post('/api/chat/stream', async (c) => {
       }
     }
 
-    // Parse JSON body with error handling
     let body
     try {
       body = await c.req.json()
@@ -525,140 +468,50 @@ app.post('/api/chat/stream', async (c) => {
       return c.json({ error: 'Invalid request', message: 'Request body must be valid JSON' }, 400)
     }
 
-    const { message, sessionId, tools = [], systemPrompt: extraSystemPrompt } = body
-
-    if (!message) {
-      return c.json({ error: 'Message is required' }, 400)
-    }
+    const { message, sessionId, systemPrompt: extraSystemPrompt } = body
 
     const apiKey = c.env.DASHSCOPE_API_KEY
-    if (!apiKey) {
-      return c.json({ error: 'API key not configured' }, 500)
-    }
-
     const model = c.env.DASHSCOPE_MODEL || 'qwen-plus'
     const mergedSystemPrompt = extraSystemPrompt
       ? `${BASE_SYSTEM_PROMPT}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
       : BASE_SYSTEM_PROMPT
 
-    // Call DashScope API with streaming - with 30s timeout
-    const fetchController = new AbortController()
-    const fetchTimeout = setTimeout(() => fetchController.abort(), 30000)
-
-    let response
-    try {
-      response = await fetch(
-        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'X-DashScope-SSE': 'enable',
-          },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              { role: 'system', content: mergedSystemPrompt },
-              { role: 'user', content: message }
-            ],
-            stream: true,
-          }),
-          signal: fetchController.signal,
-        }
-      )
-    } finally {
-      clearTimeout(fetchTimeout)
+    // 構建標準的 OpenAI 格式請求
+    const requestBody = {
+      model: model,
+      messages: [
+        { role: 'system', content: mergedSystemPrompt },
+        { role: 'user', content: message }
+      ],
+      stream: true,
+      tools: TOOLS // 確保工具列表被傳入
     }
+
+    const response = await fetch(
+      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'X-DashScope-SSE': 'enable',
+        },
+        body: JSON.stringify(requestBody),
+      }
+    )
 
     if (!response.ok) {
       throw new Error(`DashScope API error: ${response.status}`)
     }
 
-    if (!response.body) {
-      throw new Error('Response body is null - API may not support streaming')
-    }
-
-    // Use Hono's stream helper for Edge-compatible streaming
-    return stream(c, async (stream) => {
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      let toolCallFound = false
-      let toolCallData = null
-
-      try {
-        while (true) {
-          let readResult
-          try {
-            readResult = await Promise.race([
-              reader.read(),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Read timeout')), 30000))
-            ])
-          } catch (readError) {
-            if (readError.message === 'Read timeout') {
-              await stream.write(`data: {"error": "Stream read timeout - please try again"}\n\n`)
-            }
-            break
-          }
-
-          const { done, value } = readResult
-          if (done) {
-            if (toolCallFound && toolCallData) {
-              console.log('[Stream] Stream ended, executing tool. toolCallFound:', toolCallFound, 'toolCallData:', JSON.stringify(toolCallData).substring(0, 200))
-              const toolResult = await executeTool(toolCallData)
-              console.log('[Stream] Tool executed, result:', JSON.stringify(toolResult).substring(0, 200))
-              await stream.write(`data: ${JSON.stringify({ tool_call_result: toolResult })}\n\n`)
-              await new Promise(resolve => setTimeout(resolve, 50))
-
-              // 直接使用硬编码引导语，绝对不进行第二次 AI 请求
-              const replyMsg = toolResult.message || '我为你准备了这个练习，我们一起试试看。'
-              await stream.write(`data: ${JSON.stringify({ output: { choices: [{ message: { content: replyMsg } }] } })}\n\n`)
-            }
-            await stream.write('data: [DONE]\n\n')
-            break
-          }
-
-          const chunk = decoder.decode(value, { stream: true })
-          buffer += chunk
-
-          const lines = buffer.split('\n')
-          buffer = lines.pop() || ''
-
-          for (const line of lines) {
-            const trimmedLine = line.trim()
-            if (!trimmedLine || trimmedLine.startsWith(':')) continue
-            if (trimmedLine.startsWith('data:')) {
-              const data = trimmedLine.slice(5).trim()
-              if (data === '[DONE]') continue
-
-              try {
-                const parsed = JSON.parse(data)
-                // Check for tool calls in various formats
-                const toolCalls = parsed.choices?.[0]?.message?.tool_calls ||
-                                 parsed.choices?.[0]?.delta?.tool_calls ||
-                                 parsed.output?.choices?.[0]?.message?.tool_calls
-                if (toolCalls && toolCalls.length > 0 && !toolCallFound) {
-                  console.log('[Stream] Tool calls detected:', JSON.stringify(toolCalls).substring(0, 200))
-                  toolCallFound = true
-                  toolCallData = toolCalls[0]
-                  console.log('[Stream] toolCallData set:', JSON.stringify(toolCallData).substring(0, 200))
-                  continue
-                }
-
-                const contentWithoutTool = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || parsed.output?.choices?.[0]?.message?.content
-                if (contentWithoutTool && !toolCallFound) {
-                  await stream.write(line + '\n\n')
-                }
-              } catch (e) {
-                if (data) await stream.write(line + '\n\n')
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[Stream Error]', error)
-        await stream.write(`data: {"error": "${error instanceof Error ? error.message : 'Unknown error'}"}\n\n`)
+    // 將 DashScope 的流直接作為 Response 返回，實現透明透傳
+    // Hono 的 CORS 中介軟體會自動處理跨域頭
+    return new Response(response.body, {
+      status: response.status,
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
       }
     })
 
@@ -728,7 +581,8 @@ ${conversation}`
           },
           body: JSON.stringify({
             model: model,
-            messages: [{ role: 'user', content: summarizationPrompt }]
+            messages: [{ role: 'user', content: summarizationPrompt }],
+            tools: TOOLS // <--- 【關鍵修復】：必須把工具列表傳給模型
           }),
           signal: responseController.signal,
         }

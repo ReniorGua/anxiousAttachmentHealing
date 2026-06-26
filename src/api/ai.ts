@@ -72,13 +72,13 @@ export interface AIChatResponse {
 /**
  * Backend API URL from environment
  */
-const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3000'
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://127.0.0.1:8787'
 
 /**
  * Access code from environment
  * Sent in header for server-side verification
  */
-const ACCESS_CODE = import.meta.env.VITE_ACCESS_CODE || ''
+const ACCESS_CODE = localStorage.getItem('access_code') || import.meta.env.VITE_ACCESS_CODE || ''
 
 /**
  * Enable real AI backend or use mock
@@ -199,7 +199,6 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
 
   // Read memory context from localStorage and format as system prompt
   userMemoryStore.loadFromStorage()
-  const memoryContext = userMemoryStore.getContextSummary()
 
   // If real AI is disabled, use mock
   if (!ENABLE_REAL_AI) {
@@ -224,18 +223,16 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
       message: params.message.substring(0, 50) + '...',
       sessionId: params.sessionId,
       stream: params.stream,
-      hasMemoryContext: !!memoryContext,
     })
 
     const response = await fetch(`${BACKEND_API_URL}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(ACCESS_CODE ? { 'X-Access-Code': ACCESS_CODE } : {}),
+        ...(ACCESS_CODE ? { 'x-access-code': ACCESS_CODE } : {}),
       },
       body: JSON.stringify({
         message: params.message,
-        systemPrompt: memoryContext,
         sessionId: params.sessionId,
         stream: params.stream || false,
       }),
@@ -359,7 +356,6 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
 
   // Read memory context from localStorage
   userMemoryStore.loadFromStorage()
-  const memoryContext = userMemoryStore.getContextSummary()
 
   if (!ENABLE_REAL_AI) {
     // Mock streaming for demo
@@ -380,11 +376,10 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(ACCESS_CODE ? { 'X-Access-Code': ACCESS_CODE } : {}),
+        ...(ACCESS_CODE ? { 'x-access-code': ACCESS_CODE } : {}),
       },
       body: JSON.stringify({
         message: params.message,
-        systemPrompt: memoryContext,
         sessionId: params.sessionId,
       }),
     })
