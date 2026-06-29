@@ -100,6 +100,54 @@
                     @complete="onHealingComplete(message.id, $event)"
                   />
                 </Transition>
+                <Transition name="fade-in-slow">
+                  <FutureVision
+                    v-if="message.healingComponent === 'futureVision'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
+                <Transition name="fade-in-slow">
+                  <FearRelease
+                    v-if="message.healingComponent === 'fearRelease'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
+                <Transition name="fade-in-slow">
+                  <DeepRelease
+                    v-if="message.healingComponent === 'deepRelease'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
+                <Transition name="fade-in-slow">
+                  <PersonalLaw
+                    v-if="message.healingComponent === 'personalLaw'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
+                <Transition name="fade-in-slow">
+                  <BirthMemory
+                    v-if="message.healingComponent === 'birthMemory'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
+                <Transition name="fade-in-slow">
+                  <ResistanceExhaustion
+                    v-if="message.healingComponent === 'resistanceExhaustion'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
+                <Transition name="fade-in-slow">
+                  <ThirtyDaysAffirmation
+                    v-if="message.healingComponent === 'thirtyDaysAffirmation'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
+                <Transition name="fade-in-slow">
+                  <AffirmationEcho
+                    v-if="message.healingComponent === 'affirmationEcho'"
+                    @complete="onHealingComplete(message.id, $event)"
+                  />
+                </Transition>
               </div>
             </Transition>
           </div>
@@ -173,6 +221,14 @@ import SomaticRadar from './components/SomaticRadar.vue'
 import InnerChild from './components/InnerChild.vue'
 import ListWriting from './components/ListWriting.vue'
 import FreeWriting from './components/FreeWriting.vue'
+import FutureVision from './components/FutureVision.vue'
+import FearRelease from './components/FearRelease.vue'
+import DeepRelease from './components/DeepRelease.vue'
+import PersonalLaw from './components/PersonalLaw.vue'
+import BirthMemory from './components/BirthMemory.vue'
+import ResistanceExhaustion from './components/ResistanceExhaustion.vue'
+import ThirtyDaysAffirmation from './components/ThirtyDaysAffirmation.vue'
+import AffirmationEcho from './components/AffirmationEcho.vue'
 import { audioGroundingEngine } from '@/services/audioService'
 import type { HealingComponentType } from '@/types/ai'
 
@@ -239,7 +295,7 @@ const onHealingComplete = async (messageId: string, event: { completed?: boolean
   else if (componentType === 'innerChild') userMemoryStore.addMilestone('与内在小孩对话', 'self_soothing')
 }
 
-// 统一定义 Tool Name 到组件的映射表
+// 统一定义 Tool Name 到组件的映射表（与后端 executeTool 返回的 component 一致）
 const toolToComponentMap: Record<string, HealingComponentType> = {
   'trigger_478_breathing': 'breathing478',
   'trigger_energy_retraction': 'energyRetraction',
@@ -247,36 +303,15 @@ const toolToComponentMap: Record<string, HealingComponentType> = {
   'trigger_inner_child': 'innerChild',
   'trigger_grounding_five_senses': 'grounding',
   'trigger_waiting_timer': 'waitingTimer',
-  'trigger_affirmation_echo': 'securityCard',
-  'trigger_belief_transformation': 'securityCard',
-  'trigger_resistance_exhaustion': 'securityCard',
-  'trigger_fear_release': 'freeWriting',
-  'trigger_deep_release': 'freeWriting',
-  'trigger_personal_law': 'securityCard',
-  'trigger_future_vision': 'securityCard',
-  'trigger_birth_memory': 'innerChild'
-}
-
-const detectHealingComponent = (message: string): HealingComponentType => {
-  const lowerMsg = message.toLowerCase()
-  if (/心跳|心跳快|喘不过气|呼吸急促|大脑空白|惊恐|要疯了|崩溃/.test(lowerMsg)) return 'breathing478'
-  if (/不发信息会疯|忍不住|控制不住|刷手机|连环发|能量耗散/.test(lowerMsg)) return 'energyRetraction'
-  if (/胃部翻腾|喉咙发紧|身体紧绷|难受/.test(lowerMsg)) return 'somaticRadar'
-  if (/没人要|被抛弃|小时候|羞耻感|绝望|内在小孩/.test(lowerMsg)) return 'innerChild'
-  if (/他爱不爱|抛弃|不值得|没价值|是不是我|心情不好|难过|焦虑|害怕|担心|累/.test(lowerMsg)) return 'securityCard'
-  return null
-}
-
-const detectHealingComponentFromAI = (content: string): HealingComponentType => {
-  const lowerContent = content.toLowerCase()
-  if (/478呼吸|4-7-8呼吸/.test(lowerContent)) return 'breathing478'
-  if (/能量回收|不再外耗/.test(lowerContent)) return 'energyRetraction'
-  if (/五感|着陆/.test(lowerContent)) return 'grounding'
-  if (/躯体觉察/.test(lowerContent)) return 'somaticRadar'
-  if (/内在小孩/.test(lowerContent)) return 'innerChild'
-  if (/确认卡|踏实感/.test(lowerContent)) return 'securityCard'
-  if (/给你20分钟/.test(lowerContent)) return 'waitingTimer'
-  return null
+  'trigger_affirmation_echo': 'affirmationEcho',
+  'trigger_belief_transformation': 'affirmationEcho',
+  'trigger_resistance_exhaustion': 'resistanceExhaustion',
+  'trigger_fear_release': 'fearRelease',
+  'trigger_deep_release': 'deepRelease',
+  'trigger_personal_law': 'personalLaw',
+  'trigger_future_vision': 'futureVision',
+  'trigger_birth_memory': 'birthMemory',
+  'trigger_affirmation_30': 'thirtyDaysAffirmation'
 }
 
 /**
@@ -287,9 +322,12 @@ const handleStreamingResponse = async (userMessage: string) => {
   let fullContent = ''
   let healingComponent: HealingComponentType = null
   let currentToolName = ''
+  let toolWasCalled = false
 
   try {
     const API_BASE = import.meta.env.VITE_BACKEND_API_URL || 'http://127.0.0.1:8787'
+
+    // 先发起流式请求，检查是否需要工具调用
     const response = await fetch(`${API_BASE}/api/chat/stream`, {
       method: 'POST',
       headers: {
@@ -324,11 +362,24 @@ const handleStreamingResponse = async (userMessage: string) => {
 
             try {
               const parsed = JSON.parse(dataStr)
+
+              // 支持多种响应格式：OpenAI 格式 / DashScope 格式 / output.text 格式
               const delta = parsed.choices?.[0]?.delta
+              const directContent = parsed.output?.choices?.[0]?.message?.content || parsed.choices?.[0]?.message?.content
+              const textContent = parsed.output?.text
+
+              let chunkContent = ''
+              if (delta?.content) {
+                chunkContent = delta.content
+              } else if (directContent) {
+                chunkContent = directContent
+              } else if (textContent) {
+                chunkContent = textContent
+              }
 
               // 1. 标准内容拼接
-              if (delta?.content) {
-                fullContent += delta.content
+              if (chunkContent) {
+                fullContent += chunkContent
                 streamingContent.value = fullContent
                 scrollToBottom()
               }
@@ -338,6 +389,7 @@ const handleStreamingResponse = async (userMessage: string) => {
                 const toolCall = delta.tool_calls[0]
                 if (toolCall.function?.name) {
                   currentToolName = toolCall.function.name
+                  toolWasCalled = true
                 }
               }
             } catch (e) {
@@ -345,6 +397,22 @@ const handleStreamingResponse = async (userMessage: string) => {
             }
           }
         }
+      }
+    }
+
+    // 如果检测到工具调用但流式响应没有返回实际内容，则切换到非流式接口获取工具执行结果
+    if (toolWasCalled && !fullContent.trim()) {
+      try {
+        const nonStreamResult = await chatWithAI({ message: userMessage, sessionId: aiChatStore.currentSessionId, stream: false })
+        if (nonStreamResult?.content) {
+          fullContent = nonStreamResult.content
+        }
+        // 从非流式响应中提取 healingComponent
+        if (nonStreamResult?.toolCalls?.[0]?.result?.component) {
+          healingComponent = nonStreamResult.toolCalls[0].result.component as HealingComponentType
+        }
+      } catch (e) {
+        // 非流式调用失败，保持使用流式响应收集到的内容（可能为空或只有部分）
       }
     }
   } catch (error: any) {
@@ -362,39 +430,15 @@ const handleStreamingResponse = async (userMessage: string) => {
     }
   }
 
-  // --- 强力防护网：拦截并抹除画面上的丑陋 JSON ---
-  const rogueJsonRegex = /\{[^}]*"tool"\s*:\s*"([^"]+)"[^}]*\}/g;
-  let match;
-  while ((match = rogueJsonRegex.exec(fullContent)) !== null) {
-    const extractedTool = match[1];
-    if (toolToComponentMap[extractedTool]) {
-      healingComponent = toolToComponentMap[extractedTool];
-    }
-  }
-  
-  if (healingComponent || currentToolName) {
-    healingComponent = healingComponent || toolToComponentMap[currentToolName];
-    // 抹除包含 tool 键值的 JSON 结构
-    fullContent = fullContent.replace(/\{[^}]*"tool"\s*:\s*"[^"]+"[^}]*\}/g, '').trim();
-    
-    // 使用 String.fromCharCode 安全处理反引号，避免 Markdown 代码块被截断
-    const tick3 = String.fromCharCode(96, 96, 96);
-    const jsonBlockRegex = new RegExp(tick3 + '(?:json)?\\\\s*', 'g');
-    const tickRegex = new RegExp(tick3, 'g');
-    
-    fullContent = fullContent
-      .replace(jsonBlockRegex, '')
-      .replace(tickRegex, '')
-      .replace(/[”“"]*$/, '')
-      .trim();
+  // --- 防护网：清理残留的 JSON 片段 ---
+  if (currentToolName) {
+    // 抹除包含 function.name 的 JSON 结构（DashScope SSE 格式）
+    fullContent = fullContent.replace(/```json\s*[\s\S]*?```/g, '').trim();
+    fullContent = fullContent.replace(/\{[^}]*"name"\s*:\s*"[^"]*"[^}]*\}/g, '').trim();
   }
 
-  // --- 最终兜底机制 ---
-  if (!healingComponent) healingComponent = detectHealingComponent(userMessage)
-  if (!healingComponent) healingComponent = detectHealingComponentFromAI(fullContent)
-
-  // 防止画面空无一物
-  if (healingComponent && !fullContent.trim()) {
+  // 防止画面空无一物：当检测到工具调用但没有内容时，提供友好的默认消息
+  if ((healingComponent || currentToolName) && !fullContent.trim()) {
     fullContent = '我为你准备了这个练习，我们一起试试看。'
   }
 

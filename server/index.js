@@ -36,178 +36,40 @@ app.notFound((c) => {
 
 // Tool definitions for DashScope Function Calling
 const TOOLS = [
-  // ================= 一、 🌪️ 恐慌与焦躁 (panic) =================
   {
     type: 'function',
     function: {
-      name: 'trigger_grounding_five_senses',
-      description: '当用户脑子停不下来、反复想一件事、焦虑蔓延、思维反刍时调用。',
+      name: 'route_healing_practice',
+      description: '当用户表达负面情绪或需要疗愈时，必须调用此工具进行分诊。',
       parameters: {
         type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户的焦虑蔓延表现' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_478_breathing',
-      description: '当用户表达心悸、心跳快、喘不过气、惊恐、感觉要疯了或大脑空白时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户的急性生理恐慌症状' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_somatic_radar',
-      description: '当用户感到胸口堵、胃部翻腾、身体发紧、浑身难受等躯体化症状时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户的躯体不适感' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_waiting_timer',
-      description: '当用户在等待消息、坐立不安、忍不住想看手机、想连环发信息或有冲动行为前调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户正在焦急等待或想冲动做的事' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_energy_retraction',
-      description: '当用户能量耗散、被别人吸走、强迫性刷动态、查岗、感觉控制不住自己时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户向外耗散精力的行为' } },
-        required: ['reason']
-      }
-    }
-  },
-
-  // ================= 二、 🥀 疲惫与内耗 (chaos) =================
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_inner_child',
-      description: '当用户觉得自己没人要、被抛弃、不配、充满羞耻感、绝望或感到极度无助时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户深层无助与羞耻的来源' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_affirmation_echo',
-      description: '当用户觉得自己不值得、没价值、不够好、陷入自我否定、无法相信自己能改变时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户的自我否定语句' } },
-        required: ['reason']
-      }
-    }
-  },
-
-  // ================= 三、 🧠 脑子很乱 (rumination) =================
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_fear_release',
-      description: '当用户表达害怕失败、担心未来、恐惧未知、不敢迈步时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户当前面临的具体恐惧' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_resistance_exhaustion',
-      description: '当用户防御心很强、找借口、表示“道理都懂但做不到”、深陷内耗与阻抗时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户的阻抗表现或借口' } },
-        required: ['reason']
-      }
-    }
-  },
-
-  // ================= 四、 🌱 深度重塑 (deep) =================
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_affirmation_30',
-      description: '当用户表达缺乏稳定感、自我信任不足、想要寻求长期成长与内心稳固时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户渴望建立自我信任的诉求' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_personal_law',
-      description: '当用户核心信念崩塌、觉得自己一无是处、陷入死循环的自我攻击和反复惩罚时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户潜意识里的核心负面信念' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_birth_memory',
-      description: '当用户表达存在性焦虑、觉得自己出生是个错误、提及原生家庭创伤或渴望重新开始时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户的存在性焦虑或原生家庭创伤' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_deep_release',
-      description: '当用户长期自我设限、背负难以启齿的秘密、受到长期压抑、感到沉重负担时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户压抑的秘密或长期负担' } },
-        required: ['reason']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'trigger_future_vision',
-      description: '当用户明确表达人生迷茫、没有盼头、不知道路怎么走、失去人生方向时调用。',
-      parameters: {
-        type: 'object',
-        properties: { reason: { type: 'string', description: '简述用户迷茫的原因或失去方向的感受' } },
-        required: ['reason']
+        properties: {
+          practice_id: {
+            type: 'string',
+            description: '根据 System Prompt 的分诊逻辑树，选择最匹配的练习组件 ID',
+            enum: [
+              'trigger_478_breathing', 
+              'trigger_somatic_radar', 
+              'trigger_grounding_five_senses',
+              'trigger_waiting_timer', 
+              'trigger_energy_retraction', 
+              'trigger_inner_child',
+              'trigger_affirmation_echo', 
+              'trigger_fear_release', 
+              'trigger_resistance_exhaustion',
+              'trigger_affirmation_30', 
+              'trigger_personal_law', 
+              'trigger_birth_memory',
+              'trigger_deep_release', 
+              'trigger_future_vision'
+            ]
+          },
+          reason: { 
+            type: 'string', 
+            description: '请用原话简述为何选择该练习（例如：用户连续表达迷茫，感到失去方向）' 
+          }
+        },
+        required: ['practice_id', 'reason']
       }
     }
   }
@@ -227,59 +89,58 @@ const EMOTION_PRESETS = {
  * Execute a tool call
  */
 async function executeTool(toolCall) {
-  const { name, arguments: argsRaw } = toolCall.function
-  console.log(`[Tool Call] Executing: ${name}`)
-
-  let args = {}
+  const { name, arguments: argsRaw } = toolCall.function;
+  
+  let args = {};
   if (argsRaw) {
     if (typeof argsRaw === 'string') {
       try { args = JSON.parse(argsRaw) } catch (e) { args = { _raw: argsRaw } }
     } else if (typeof argsRaw === 'object') {
-      args = argsRaw
+      args = argsRaw;
     }
   }
 
-  switch (name) {
+  // 拦截我们的超级路由工具
+  let targetComponent = name;
+  if (name === 'route_healing_practice') {
+    targetComponent = args.practice_id; // 从参数中提取出它真正想调用的练习 ID
+    console.log(`[Tool Call] Router distributed to: ${targetComponent}, Reason: ${args.reason}`);
+  } else {
+    console.log(`[Tool Call] Executing direct tool: ${name}`);
+  }
+
+  // 下面直接把之前的 switch(name) 改成 switch(targetComponent) 即可
+  switch (targetComponent) {
     case 'trigger_478_breathing':
-      return { success: true, component: 'breathing478', intensity: args.intensity || 5, symptom: args.symptom || '呼吸急促', message: '我们先做4-7-8呼吸法，让身体平静下来 🌊' }
+      return { success: true, component: 'breathing478', message: '我们先做4-7-8呼吸法，让身体平静下来 🌊' };
     case 'trigger_energy_retraction':
-      return { success: true, component: 'energyRetraction', behavior: args.behavior || '查看对方动态', desperation: args.desperation || 5, message: '我听到了你内心的风暴。让我们把那个向外试探的触手，慢慢收回到自己身上 🐙' }
+      return { success: true, component: 'energyRetraction', message: '我听到了你内心的风暴。让我们把向外的触手收回来 🐙' };
     case 'trigger_somatic_radar':
-      return { success: true, component: 'somaticRadar', location: args.location || '胸口', sensation: args.sensation || '紧绷', message: '谢谢你告诉我这些身体的感觉。让我们一起来听听身体在说什么 🔍' }
+      return { success: true, component: 'somaticRadar', message: '谢谢你告诉我身体的感觉。让我们一起来听听它在说什么 🔍' };
     case 'trigger_inner_child':
-      return { success: true, component: 'innerChild', woundType: args.woundType || 'helplessness', age: args.age || 5, message: '我听到了你内心的那个小孩。我在这里，让我们一起回去看看那个小小的你 💜' }
+      return { success: true, component: 'innerChild', message: '我听到了你内心的那个小孩。让我们一起回去看看小小的你 💜' };
     case 'trigger_affirmation_echo':
-      return { success: true, component: 'affirmationEcho', message: '我听到了你内心的这份不确定。来，我们一起把你的声音变成力量 ✦' }
-    case 'trigger_belief_transformation':
-      return { success: true, component: 'affirmationEcho', message: '我听到了你内心在惩罚自己的声音。让我们一起找到它的对立面 ✦' }
+      return { success: true, component: 'affirmationEcho', message: '我听到了你内心的不确定。我们一起把你的声音变成力量 ✦' };
     case 'trigger_resistance_exhaustion':
-      return { success: true, component: 'resistanceExhaustion', message: '我听到了你内心的阻抗声。让我们让它说完，直到它安静下来 ◈' }
+      return { success: true, component: 'resistanceExhaustion', message: '我听到了你内心的阻抗。让它说完，直到它安静下来 ◈' };
     case 'trigger_deep_release':
-      return { success: true, component: 'deepRelease', message: '我听到了你内心深处的这些声音。让我们为它们找一个出口 ⛓' }
+      return { success: true, component: 'deepRelease', message: '我听到了你深处的这些声音。让我们为它们找一个出口 ⛓' };
     case 'trigger_future_vision':
-      return { success: true, component: 'futureVision', message: '我听到了你对未来的渴望。让我们一起来描绘一条路 🌿' }
+      return { success: true, component: 'futureVision', message: '我听到了你对前路的迷茫。让我们慢慢在雾中找找方向 🌿' };
     case 'trigger_waiting_timer':
-      return { success: true, component: 'waitingTimer', anxietyLevel: args.anxietyLevel || 5, message: '' }
+      return { success: true, component: 'waitingTimer', message: '安静地等一等，把这20分钟交给自己 ⏰' };
     case 'trigger_grounding_five_senses':
-      return { success: true, component: 'grounding', confusionLevel: args.confusionLevel || 5, message: '' }
+      return { success: true, component: 'grounding', message: '思绪飘得太远了，让我们慢慢回到此时此刻 🌍' };
     case 'trigger_fear_release':
-      return { success: true, component: 'fearRelease', message: '我听到你心里有些害怕。来，我们一起把它写下来 🕯️' }
+      return { success: true, component: 'fearRelease', message: '我听到你心里有些害怕。来，我们一起把它写下来 🕯️' };
     case 'trigger_personal_law':
-      return { success: true, component: 'personalLaw', message: '我听到了你内心的这些声音。让我们一起来面对它们 🔮' }
+      return { success: true, component: 'personalLaw', message: '我听到了你内心的自我审判。让我们一起来面对它 🔮' };
     case 'trigger_birth_memory':
-      return { success: true, component: 'birthMemory', message: '我听到了你内心的这份渴望。让我们一起回到生命的源头 ✨' }
-    case 'apply_healing_atmosphere':
-      const emotion = args.emotion || 'fear'
-      const preset = EMOTION_PRESETS[emotion] || EMOTION_PRESETS.fear
-      return { success: true, themeColor: args.themeColor || preset.themeColor, backgroundMusic: args.backgroundMusic || preset.backgroundMusic, initialComfort: args.initialComfort || preset.initialComfort, emotion: emotion, message: '治愈氛围已启动 ✨' }
-    case 'showSecurityCard':
-      return { success: true, component: 'securityCard', message: '正在为你准备温暖的话语 ✨' }
-    case 'showGrounding':
-      return { success: true, component: 'grounding', message: '让我们回到当下，感受此刻的安全 🌍' }
-    case 'showWaitingTimer':
-      return { success: true, component: 'waitingTimer', message: '给自己一点时间，20分钟后你会有不同的感受 ⏰' }
+      return { success: true, component: 'birthMemory', message: '让我们一起回到生命的源头，重新抱抱自己 ✨' };
+    case 'trigger_affirmation_30':
+      return { success: true, component: 'affirmation30', message: '想要长出一棵大树，我们需要每天浇一点水 🌱' };
     default:
-      return { success: false, error: `Unknown tool: ${name}` }
+      return { success: false, error: `Unknown routing target: ${targetComponent}` };
   }
 }
 
@@ -292,35 +153,36 @@ const BASE_SYSTEM_PROMPT = `【最高优先级约束 - 严禁代码泄露】
 2. 【极其重要】你的文本回复中绝对不能出现任何函数名（如 trigger_future_vision）、参数（如 reason）或类似 \`call:default_api\` 的调用代码！工具调用必须通过底层机制默默完成，不要把调用的过程写给用户看。
 3. 你的纯文本回复不要描述练习步骤。
 
-你是一位如自然般包容、提供沉浸式且慢节奏疗愈陪伴的向导。你的核心任务是深呼吸、倾听，并将用户引导至最适合当下的疗愈练习。
+你是一位如自然般包容、提供沉浸式且慢节奏疗愈陪伴的向导。你的核心任务是深呼吸、倾听，用最佳的疗愈话语帮助用户疗愈，并将用户引导至最适合当下的疗愈练习。
 
 【核心分诊逻辑树（Routing SOP）】
 请严格根据用户当前的能量状态，按以下四大类别进行判断并调用对应的工具：
 
-一、 恐慌与焦躁 (Panic) - 急性爆发与失控
+一、 疲惫、恐慌、焦躁 (Panic) 
 - 心跳快/喘不过气/快要失控 -> 强制调用 trigger_478_breathing
 - 胸堵/胃翻腾/身体发紧等躯体症状 -> 强制调用 trigger_somatic_radar
 - 脑子停不下来/焦虑蔓延/反复想一件事 -> 强制调用 trigger_grounding_five_senses
 - 坐立不安/等待消息煎熬/想连环发信息 -> 强制调用 trigger_waiting_timer
 - 能量被他人吸走/强迫性刷动态/查岗 -> 强制调用 trigger_energy_retraction
 
-二、 疲惫与内耗 (Chaos) - 自我价值受损
+二、 内耗 (Chaos)
 - 绝望无助/觉得自己没人要/充满羞耻感 -> 强制调用 trigger_inner_child
 - 觉得自己没价值/不够好/深陷自我否定 -> 强制调用 trigger_affirmation_echo
 
-三、 脑子很乱 (Rumination) - 对抗与恐惧
+三、 脑子很乱 (Rumination) 
 - 恐惧未知/害怕失败/不敢迈出下一步 -> 强制调用 trigger_fear_release
 - 道理都懂但做不到/找借口/防御心极强 -> 强制调用 trigger_resistance_exhaustion
 
-四、 深度重塑 (Deep) - 存在与未来规划
+四、 迷茫、失去方向、自我约束 (Deep) 
 - 表达人生迷茫/失去方向/没有盼头 -> 强制调用 trigger_future_vision
 - 缺乏稳定感/想要寻求长期的自我信任 -> 强制调用 trigger_affirmation_30
 - 觉得自己一无是处/陷入死循环的自我惩罚 -> 强制调用 trigger_personal_law
-- 存在性焦虑/原生家庭创伤/渴望重新开始 -> 强制调用 trigger_birth_memory
+- 原生家庭创伤/渴望重新开始 -> 强制调用 trigger_birth_memory
 - 长期被压抑/背负难以启齿的沉重秘密 -> 强制调用 trigger_deep_release
 
 对话流规则：
-仅当用户单纯打招呼、分享开心日常或明确拒绝练习时，才只使用纯文本回复。只要有上述情绪标签，强制调用工具！`
+如果用户输入消极情绪，请你回复疗愈内容并引导用户进行以上练习，只要有上述情绪标签，强制调用工具！
+仅当用户单纯打招呼、分享开心日常或明确拒绝练习时，使用纯文本回复。`
 /**
  * POST /api/chat
  * Non-streaming chat with DashScope
@@ -363,9 +225,9 @@ app.post('/api/chat', async (c) => {
       ? `${BASE_SYSTEM_PROMPT}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
       : BASE_SYSTEM_PROMPT
 
-    // Call DashScope API - with 30s timeout
+    // Call DashScope API - with 60s timeout (工具调用需要更长时间)
     const fetchController = new AbortController()
-    const fetchTimeout = setTimeout(() => fetchController.abort(), 30000)
+    const fetchTimeout = setTimeout(() => fetchController.abort(), 60000)
 
     let dashscopeResponse
     try {
@@ -399,8 +261,15 @@ app.post('/api/chat', async (c) => {
     }
 
     const data = await dashscopeResponse.json()
-    const toolCalls = data.choices?.[0]?.message?.tool_calls
-    const firstContent = data.choices?.[0]?.message?.content
+    // 兼容 Qwen3 的 output 格式和标准 choices 格式
+    const messageData = data.output?.choices?.[0]?.message || data.choices?.[0]?.message || {}
+    const toolCalls = messageData.tool_calls
+    const firstContent = messageData.content
+
+    console.log(`[Chat] Response structure keys: ${Object.keys(data).join(', ')}`)
+    console.log(`[Chat] messageData keys: ${Object.keys(messageData).join(', ')}`)
+    console.log(`[Chat] toolCalls: ${JSON.stringify(toolCalls)}`)
+    console.log(`[Chat] firstContent: ${firstContent}`)
 
     if (toolCalls && toolCalls.length > 0) {
       console.log(`[Chat] Tool calls detected: ${toolCalls.length}`)
@@ -415,7 +284,12 @@ app.post('/api/chat', async (c) => {
         })
       }
 
-      const finalContent = toolResults[0]?.result?.message || '我为你准备了这个练习，我们一起试试看。'
+      // 优先使用模型在工具调用之前输出的原始内容
+      const aiOriginalContent = messageData.reasoning_content || messageData.content || ''
+      const finalContent = aiOriginalContent.trim()
+        ? aiOriginalContent.trim()
+        : toolResults[0]?.result?.message || '我为你准备了这个练习，我们一起试试看。'
+      console.log(`[Chat] AI final content: ${finalContent}`)
 
       return c.json({
         messageId: `msg-${Date.now()}`,
@@ -426,7 +300,37 @@ app.post('/api/chat', async (c) => {
       })
     }
 
-    const aiResponse = data.choices?.[0]?.message?.content || '谢谢你分享这些。我听到了，愿意继续听你说。'
+    // 如果 content 是 stringified JSON 格式的工具调用，尝试解析并执行
+    if (firstContent && typeof firstContent === 'string' && firstContent.includes('"name"') && firstContent.includes('"arguments"')) {
+      try {
+        const parsedContent = JSON.parse(firstContent)
+        if (parsedContent.name && parsedContent.arguments) {
+          console.log(`[Chat] Detected stringified tool call: ${parsedContent.name}`)
+          const fakeToolCall = {
+            id: `call-auto-${Date.now()}`,
+            function: {
+              name: parsedContent.name,
+              arguments: typeof parsedContent.arguments === 'string' ? parsedContent.arguments : JSON.stringify(parsedContent.arguments)
+            }
+          }
+          const result = await executeTool(fakeToolCall)
+          const finalContent = result.message || '我为你准备了这个练习，我们一起试试看。'
+          console.log(`[Chat] Stringified tool - AI final content: ${finalContent}`)
+          return c.json({
+            messageId: `msg-${Date.now()}`,
+            content: finalContent,
+            sessionId: sessionId || `session-${Date.now()}`,
+            toolCalls: [{ toolCallId: fakeToolCall.id, toolName: fakeToolCall.function.name, result }],
+            usage: data.usage || {},
+          })
+        }
+      } catch (e) {
+        console.log(`[Chat] Failed to parse content as JSON: ${e.message}`)
+      }
+    }
+
+    const aiResponse = messageData.content || firstContent || '谢谢你分享这些。我听到了，愿意继续听你说。'
+    console.log(`[Chat] AI direct response: ${aiResponse}`)
 
     return c.json({
       messageId: `msg-${Date.now()}`,
@@ -487,26 +391,98 @@ app.post('/api/chat/stream', async (c) => {
       tools: TOOLS // 確保工具列表被傳入
     }
 
-    const response = await fetch(
-      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'X-DashScope-SSE': 'enable',
-        },
-        body: JSON.stringify(requestBody),
-      }
-    )
+    // 添加60秒超时保护
+    const fetchController = new AbortController()
+    const fetchTimeout = setTimeout(() => fetchController.abort(), 60000)
+
+    let response
+    try {
+      response = await fetch(
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'X-DashScope-SSE': 'enable',
+          },
+          body: JSON.stringify(requestBody),
+          signal: fetchController.signal,
+        }
+      )
+    } finally {
+      clearTimeout(fetchTimeout)
+    }
 
     if (!response.ok) {
       throw new Error(`DashScope API error: ${response.status}`)
     }
 
-    // 將 DashScope 的流直接作為 Response 返回，實現透明透傳
-    // Hono 的 CORS 中介軟體會自動處理跨域頭
-    return new Response(response.body, {
+    // 读取流式内容并记录日志
+    const reader = response.body?.getReader()
+    const chunks = []
+    let fullContent = ''
+
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        chunks.push(value)
+        // 尝试解码并提取文本内容（不完美但够用）
+        try {
+          const text = new TextDecoder('utf-8').decode(value, { stream: true })
+          fullContent += text
+        } catch (e) {}
+      }
+    }
+
+    // 合并所有 chunks
+    const combined = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0))
+    let offset = 0
+    for (const chunk of chunks) {
+      combined.set(chunk, offset)
+      offset += chunk.length
+    }
+
+    // 解析 SSE 数据，提取 AI 回复文本（包括 reasoning_content 和 content）
+    let aiTextContent = ''
+    let foundContent = false
+    let foundReasoning = false
+    const lines = fullContent.split('\n')
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('data:')) {
+        const dataStr = trimmed.slice(5).trim()
+        if (dataStr && dataStr !== '[DONE]') {
+          try {
+            const parsed = JSON.parse(dataStr)
+            const content = parsed.choices?.[0]?.delta?.content
+            const reasoning = parsed.choices?.[0]?.delta?.reasoning_content
+            const outputText = parsed.output?.text
+            if (content) {
+              aiTextContent += content
+              foundContent = true
+            }
+            if (reasoning) {
+              aiTextContent += reasoning
+              foundReasoning = true
+            }
+            if (outputText) {
+              aiTextContent += outputText
+              foundContent = true
+            }
+          } catch (e) {}
+        }
+      }
+    }
+    console.log(`[${requestId}] Found content=${foundContent}, reasoning=${foundReasoning}`)
+
+    console.log(`[${requestId}] Stream raw:\n${fullContent.substring(0, 1000)}`)
+    console.log(`[${requestId}] AI parsed text: ${aiTextContent || '(empty)'}`)
+    console.log(`[${requestId}] === STREAM COMPLETE ===`)
+
+    // 返回原始流
+    return new Response(combined, {
       status: response.status,
       headers: {
         'Content-Type': 'text/event-stream',
