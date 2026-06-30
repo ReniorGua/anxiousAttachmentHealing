@@ -1,4 +1,4 @@
-# 疗心舍
+# 松间心舍 (Healing Rest Return)
 
 一个温暖的心理健康陪伴应用，以「关切与注视」为核心视觉基调，用缓慢、静谧的交互体验，陪伴用户度过每一个需要温暖的时刻。
 
@@ -13,25 +13,26 @@
 ## 技术栈
 
 ### 核心技术
-- **框架**: Vue 3.5+ (Setup 语法糖 + Composition API)
+- **前端框架**: Vue 3.5+ (Setup 语法糖 + Composition API)
 - **构建工具**: Vite 7.x
 - **语言**: TypeScript 5.x
 - **样式**: Tailwind CSS 3.x
 - **状态管理**: Pinia 3.x
 - **路由**: Vue Router 4.x
-- **后端代理**: Express.js (连接阿里云 DashScope 通义千问 API)
-- **数据库**: Supabase (可选，用于存储聊天记录)
+- **后端**: Hono Framework (Cloudflare Workers 边缘部署)
+- **数据库**: Supabase (可选，用于存储聊天记录和记忆)
 
 ### AI 能力
 - **模型**: 阿里云通义千问 (Qwen Turbo/Plus/Max)
-- **接入方式**: 后端代理 + SSE 流式响应
-- **特色功能**: 情绪感知、安全感卡片、五感着陆练习
+- **接入方式**: SSE 流式响应 + Function Calling 工具调用
+- **特色功能**: 情绪分诊、疗愈练习组件自动触发、流式对话中断取消
 
 ## 快速开始
 
 ### 环境要求
 - Node.js 18+
 - npm 9+
+- Wrangler CLI (`npm install -g wrangler`)
 
 ### 1. 安装依赖
 
@@ -41,35 +42,31 @@ npm install
 
 ### 2. 配置环境变量
 
-复制环境变量模板并填写实际配置：
-
-```bash
-cp .env.example .env.development
-cp server/.env.example server/.env
-```
-
-编辑 `.env.development`：
+前端环境变量 (`.env.development`):
 ```env
 VITE_DASHSCOPE_API_KEY=your-dashscope-api-key
-VITE_DASHSCOPE_MODEL=qwen-turbo
-VITE_BACKEND_API_URL=http://localhost:3000
+VITE_DASHSCOPE_MODEL=qwen-plus
+VITE_BACKEND_API_URL=http://localhost:8787
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_ACCESS_CODE=your-access-code
 ```
 
-编辑 `server/.env`：
+后端环境变量 (`server/.dev.vars`):
 ```env
 DASHSCOPE_API_KEY=your-dashscope-api-key
-DASHSCOPE_MODEL=qwen-turbo
-PORT=3000
+DASHSCOPE_MODEL=qwen-plus
+ACCESS_CODE=your-access-code
 ```
 
 ### 3. 启动后端服务
 
 ```bash
 cd server
-node index.js
+npx wrangler dev
 ```
 
-服务将在 http://localhost:3000 启动
+服务将在 http://localhost:8787 启动
 
 ### 4. 启动前端
 
@@ -79,89 +76,100 @@ npm run dev
 
 访问 http://localhost:5173
 
-### 测试账号
-- **用户名**: `admin` 或 `user`
-- **密码**: 任意密码
-
 ## 核心功能
 
-### 1. AI 聊天陪伴
+### 1. AI 流式聊天陪伴
 
-在「疗心舍」中，AI 不是冰冷的问答机器，而是一个温暖、安全的陪伴者。
+在「松间心舍」中，AI 不是冰冷的问答机器，而是一个温暖、安全的陪伴者。
 
 - **流式响应**：文字逐字显现，像手写信一样缓缓展开
+- **中途取消**：支持点击停止按钮中断 AI 回复
 - **情绪感知**：自动识别用户情绪，调整回应方式
-- **安全感卡片**：当检测到用户情绪低落时，自动展示温暖的自我肯定语句
-- **五感着陆练习**：当检测到用户焦虑时，引导进行 5-4-3-2-1 接地练习
-- **等待计时器**：帮助用户度过想要冲动联系他人的时刻
+- **工具调用**：检测到需要疗愈时，自动触发对应练习组件
 
-### 2. 安全感卡片 (SecurityCard)
+### 2. 疗愈练习组件
+
+当 AI 检测到用户需要特定疗愈时，会通过 Function Calling 触发对应组件：
+
+| 组件 | 触发条件 |
+|------|----------|
+| 478 呼吸法 (Breathing478) | 用户焦虑、紧张 |
+| 五感着陆练习 (GroundingFiveSenses) | 用户感到不真实、解离 |
+| 等待计时器 (WaitingTimer) | 用户想冲动联系他人 |
+| 能量回收练习 (EnergyRetraction) | 用户感到被掏空 |
+| 身体扫描雷达 (SomaticRadar) | 用户有身体紧绷 |
+| 内在小孩 (InnerChild) | 用户童年创伤相关 |
+| 恐惧释放 (FearRelease) | 用户表达恐惧 |
+| 深层释放 (DeepRelease) | 用户背负沉重秘密 |
+| 阻抗耗尽 (ResistanceExhaustion) | 用户处于抗拒状态 |
+| 肯定语回声 (AffirmationEcho) | 用户需要正向肯定 |
+| 30天肯定语 (ThirtyDaysAffirmation) | 用户需要长期疗愈 |
+| 个人法则 (PersonalLaw) | 用户有被侵犯感 |
+| 未来愿景 (FutureVision) | 用户失去希望 |
+| 出生记忆 (BirthMemory) | 用户有创伤根源 |
+
+### 3. 安全感卡片 (SecurityCard)
 
 莫兰迪色系的温暖卡片，点击即可获得一句自我肯定的话语。
 
-```
-"我值得被爱，也值得拥有美好的一切"
-"此刻，我安全了"
-"我接纳此刻的自己"
-```
+### 4. 书写疗愈
 
-### 3. 五感着陆练习 (GroundingFiveSenses)
-
-基于 5-4-3-2-1 接地技术，帮助用户通过感官回归当下：
-
-- 视觉：说出 5 样看到的东西
-- 触觉：触摸 4 样东西
-- 听觉：倾听 3 种声音
-- 嗅觉：嗅闻 2 种气味
-- 味觉：品尝 1 样东西
-
-### 4. 20 分钟等待计时器 (WaitingTimer)
-
-圆形倒计时，帮助用户阻断想要立刻发消息的冲动。配合极缓慢的呼吸动画和温暖的话语：
-
-> "这段时间，你的焦虑在照顾你。但也请你照顾一下它。"
+- **清单书写 (ListWriting)**: 通过结构化问题引导用户梳理情绪
+- **自由书写 (FreeWriting)**: 无评判的自由表达出口
 
 ## 目录结构
 
 ```
 ├── src/
-│   ├── api/                    # API 接口
-│   │   ├── ai.ts              # AI 聊天接口
-│   │   ├── user.ts            # 用户接口
-│   │   └── order.ts           # 订单接口
+│   ├── api/
+│   │   └── ai.ts              # AI 聊天接口（流式）
 │   ├── components/            # 公共组件
 │   ├── layouts/               # 布局组件
-│   │   ├── MainLayout.vue     # 主布局
-│   │   └── LoginLayout.vue    # 登录布局
 │   ├── router/                # 路由配置
 │   ├── stores/                # Pinia 状态管理
 │   │   ├── aiChat.ts          # AI 聊天状态
-│   │   ├── user.ts            # 用户状态
-│   │   └── global.ts          # 全局状态
+│   │   ├── global.ts          # 全局状态
+│   │   └── userMemory.ts      # 用户记忆状态
 │   ├── types/                 # TypeScript 类型
 │   ├── utils/                 # 工具函数
-│   ├── views/                 # 业务页面
-│   │   ├── ai/               # AI 聊天模块
-│   │   │   ├── AIChatView.vue         # 主聊天页面
-│   │   │   ├── SecurityCard.vue       # 安全感卡片
-│   │   │   ├── GroundingFiveSenses.vue # 五感练习
-│   │   │   ├── WaitingTimer.vue       # 等待计时器
-│   │   │   └── components/
-│   │   │       ├── WarmCard.vue       # 温暖卡片
-│   │   │       └── BreathingGuide.vue # 呼吸引导
-│   │   ├── dashboard/         # 首页
-│   │   ├── order/             # 订单管理
-│   │   └── user/              # 用户管理
+│   ├── views/
+│   │   ├── ai/
+│   │   │   ├── AIChatView.vue         # 倾诉树洞（主聊天页面）
+│   │   │   ├── components/            # 疗愈组件
+│   │   │   │   ├── SecurityCard.vue
+│   │   │   │   ├── GroundingFiveSenses.vue
+│   │   │   │   ├── WaitingTimer.vue
+│   │   │   │   ├── Breathing478.vue
+│   │   │   │   ├── EnergyRetraction.vue
+│   │   │   │   ├── SomaticRadar.vue
+│   │   │   │   ├── InnerChild.vue
+│   │   │   │   ├── FearRelease.vue
+│   │   │   │   ├── DeepRelease.vue
+│   │   │   │   ├── ResistanceExhaustion.vue
+│   │   │   │   ├── AffirmationEcho.vue
+│   │   │   │   ├── ThirtyDaysAffirmation.vue
+│   │   │   │   ├── PersonalLaw.vue
+│   │   │   │   ├── FutureVision.vue
+│   │   │   │   ├── BirthMemory.vue
+│   │   │   │   ├── ListWriting.vue
+│   │   │   │   └── FreeWriting.vue
+│   │   ├── dashboard/
+│   │   │   ├── DashboardView.vue      # 首页
+│   │   │   └── MemoryTimeline.vue     # 成长年轮
+│   │   ├── practice/
+│   │   │   └── PracticeSpaceView.vue  # 疗愈岛屿
+│   │   └── home/
+│   │       └── HomeView.vue           # 欢迎页
 │   ├── App.vue
 │   ├── main.ts
-│   └── style.css              # 全局样式
-├── server/                    # 后端服务
-│   ├── index.js               # Express 服务器
-│   └── package.json
+│   └── style.css
+├── server/                    # Cloudflare Workers 后端
+│   ├── index.js               # Hono 服务器
+│   ├── wrangler.toml          # Wrangler 配置
+│   └── .dev.vars              # 本地环境变量
 ├── supabase/                  # Supabase 配置
-│   └── schema.sql             # 数据库 schema
-├── .env.example               # 环境变量模板
-└── tailwind.config.js         # Tailwind 配置
+│   └── schema.sql
+└── vite.config.ts
 ```
 
 ## 设计原则
@@ -193,21 +201,36 @@ npm run dev
 - 字间距：0.02em - 0.05em（克制的呼吸感）
 - 标题和正文保持适当对比度
 
+## API 接口
+
+### POST /api/chat/stream
+
+流式聊天接口，SSE 格式返回，支持中途取消。
+
+```bash
+curl -X POST https://api.healing-rest-return.cyou/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -H "X-Access-Code: your-code" \
+  -d '{"message": "我最近总是很焦虑", "sessionId": "xxx"}'
+```
+
+### POST /api/summarize
+
+记忆淬炼接口，分析对话提取焦虑触发点。
+
 ## 环境配置
 
 ### 开发环境
 
 ```env
 VITE_DASHSCOPE_API_KEY=your-api-key
-VITE_DASHSCOPE_MODEL=qwen-turbo
-VITE_BACKEND_API_URL=http://localhost:3000
-VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_DASHSCOPE_MODEL=qwen-plus
+VITE_BACKEND_API_URL=http://localhost:8787
 ```
 
 ### 生产环境
 
-在 Vercel/Railway/Render 等平台设置相同的环境变量。
+部署在 Cloudflare Workers，参考 DEPLOY.md 进行配置。
 
 ## 获取 API Key
 
@@ -232,7 +255,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 ## 致谢
 
-「疗心舍」的设计理念从「暗房显影」和「电影字幕」中汲取灵感，感谢所有让这个世界变得更温暖的人和事。
+「松间心舍」的设计理念从「暗房显影」和「电影字幕」中汲取灵感，感谢所有让这个世界变得更温暖的人和事。
 
 ## 许可证
 

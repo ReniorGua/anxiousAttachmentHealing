@@ -1,30 +1,23 @@
 # ============================================================
-# 疗心舍 · Cloudflare 部署指南（迁移版）
+# 松间心舍 · Cloudflare 部署指南
 # ============================================================
 
-> 本指南适用于从 Vercel + Railway 迁移到 Cloudflare Pages + Cloudflare Workers。
-> 迁移过程中域名解析无需变更，继续使用您现有的自定义域名。
+> 本项目部署在 Cloudflare Pages + Cloudflare Workers，采用边缘部署架构。
 
 ---
 
-##架构变化
+## 架构概览
 
 ```
-# 迁移前
-用户浏览器 → Vercel 前端 → 后端代理 (Railway) → 阿里云 DashScope
-                     ↓
-              Supabase (记忆云同步)
-
-# 迁移后
-用户浏览器 → Cloudflare Pages 前端 → Cloudflare Workers 后端 → 阿里云 DashScope
-                        ↓
-                 Supabase (记忆云同步)
+用户浏览器 → Cloudflare Pages (边缘节点) → Cloudflare Workers → 阿里云 DashScope
+                              ↓
+                       Supabase (记忆云同步)
 ```
 
-**主要变化：**
-- 前端：Vercel → Cloudflare Pages
-- 后端：Railway → Cloudflare Workers（无需维护服务器，按请求计费）
-- 速度：Cloudflare 全球边缘网络，访问更快
+**技术栈：**
+- 前端：Vue 3 + Vite + Tailwind CSS → Cloudflare Pages
+- 后端：Hono Framework → Cloudflare Workers
+- AI：阿里云 DashScope 通义千问 API
 
 ---
 
@@ -37,116 +30,32 @@
 
 ---
 
-## 第一步：打包生产环境变量
+## 环境变量配置
 
-1. 复制模板文件：
-   ```bash
-   cp .env.production.example .env.production
-   ```
+### 1. 前端环境变量 (.env.production)
 
-2. 编辑 `.env.production`，填入真实值：
-   ```
-   VITE_DASHSCOPE_API_KEY=sk-你的阿里云API密钥
-   VITE_DASHSCOPE_MODEL=qwen-plus
-   VITE_SUPABASE_URL=https://你的项目.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJhbGc...
-   VITE_ACCESS_CODE=你和AI都知道的那句话
-   VITE_BACKEND_API_URL=https://你的域名/api
-   ```
+```env
+VITE_DASHSCOPE_API_KEY=sk-你的阿里云API密钥
+VITE_DASHSCOPE_MODEL=qwen-plus
+VITE_SUPABASE_URL=https://你的项目.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGc...
+VITE_ACCESS_CODE=你和AI都知道的那句话
+VITE_BACKEND_API_URL=https://你的域名/api
+```
+
+### 2. 后端环境变量 (server/.dev.vars 或 Cloudflare Secrets)
+
+```env
+DASHSCOPE_API_KEY=sk-你的阿里云API密钥
+DASHSCOPE_MODEL=qwen-plus
+ACCESS_CODE=你和AI都知道的那句话
+```
 
 ---
 
-## 第二步：迁移后端（Railway → Cloudflare Workers）
+## 部署步骤
 
-### 2.1 创建 Cloudflare Workers 项目
-
-在后端目录创建 `wrangler.toml`：
-
-```toml
-name = "liaoxinshe-backend"
-main = "src/index.js"
-compatibility_date = "2024-01-01"
-
-[vars]
-ALLOWED_ORIGINS = "https://你的域名,https://*.workers.dev"
-
-# 环境变量（在 Cloudflare Dashboard 中设置更安全）
-# DASHSCOPE_API_KEY=sk-xxx
-# DASHSCOPE_MODEL=qwen-plus
-# ACCESS_CODE=你春天时相信的那句话
-```
-
-### 2.2 重构后端代码
-
-Cloudflare Workers 使用 `workerd` 运行时，需要将 Express.js 转换为 Fetch API 方式。
-
-将 `server/index.js` 重命名为 `server/src/index.js` 并做以下修改：
-
-```javascript
-// 原来（Express.js）
-const express = require('express')
-const cors = require('cors')
-const app = express()
-app.use(cors())
-app.post('/api/chat', (req, res) => { ... })
-app.listen(3000)
-
-//改为（Cloudflare Workers）
-export default {
-  async fetch(request, env) {
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Access-Code',
-    }
-
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders })
-    }
-
-    const url = new URL(request.url)
-
-    if (url.pathname === '/api/chat' && request.method === 'POST') {
-      // 处理聊天请求
-      const body = await request.json()
-      const { message } = body
-
-      // 调用 DashScope
-      const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${env.DASHSCOPE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: env.DASHSCOPE_MODEL || 'qwen-plus',
-          messages: [{ role: 'user', content: message }],
-        }),
-      })
-
-      const data = await response.json()
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    return new Response('Not Found', { status: 404 })
-  }
-}
-```
-
-### 2.3 处理 CORS 和环境变量
-
-在 Workers 中，环境变量通过 `env` 对象访问：
-
-```javascript
-// 获取环境变量
-const apiKey = env.DASHSCOPE_API_KEY
-const model = env.DASHSCOPE_MODEL || 'qwen-plus'
-const accessCode = env.ACCESS_CODE
-```
-
-### 2.4 部署后端
+### 1. 部署后端 (Cloudflare Workers)
 
 ```bash
 cd server
@@ -154,39 +63,28 @@ cd server
 # 首次登录 Cloudflare
 wrangler login
 
+# 设置敏感环境变量（ Secrets ）
+npx wrangler secret put DASHSCOPE_API_KEY
+npx wrangler secret put ACCESS_CODE
+
 # 部署到 Cloudflare Workers
 wrangler deploy
 ```
 
-部署成功后，Workers URL格式为：
-`https://liaoxinshe-backend.<your-subdomain>.workers.dev`
+部署成功后，Workers URL 格式为：
+`https://healing-backend.<your-subdomain>.workers.dev`
 
-### 2.5 在 Cloudflare Dashboard 设置环境变量
-
-1. 登录 [dash.cloudflare.com](https://dash.cloudflare.com)
-2. 进入 **Workers & Pages** → 找到你的后端项目
-3. **Settings → Variables** 添加：
-   - `DASHSCOPE_API_KEY` = `sk-你的真实密钥`
-   - `DASHSCOPE_MODEL` = `qwen-plus`
-   - `ACCESS_CODE` = `你春天时相信的那句话`
-4. 保存后重新部署使变量生效
-
----
-
-## 第三步：迁移前端（Vercel → Cloudflare Pages）
-
-### 3.1 使用 Wrangler 部署
+### 2. 部署前端 (Cloudflare Pages)
 
 ```bash
-# 进入前端目录
-cd /path/to/HealRestReturn
+# 构建前端
+npm run build
 
 # 部署到 Cloudflare Pages
-wrangler pages deploy dist --project-name=liaoxinshe
+npx wrangler pages deploy dist --project-name=healing-frontend
 ```
 
-### 3.2 或者通过 GitHub 集成
-
+或者通过 GitHub 集成：
 1. 登录 [dash.cloudflare.com](https://dash.cloudflare.com)
 2. **Workers & Pages** → **Create application** → **Pages** → **Connect to Git**
 3. 选择你的 GitHub 仓库
@@ -195,114 +93,166 @@ wrangler pages deploy dist --project-name=liaoxinshe
    - **Build output directory**: `dist`
 5. 点击 **Deploy**
 
-### 3.3 配置 Pages 函数（处理 SPA 路由）
+### 3. 配置自定义域名
 
-Cloudflare Pages 默认支持 SPA 路由，但需要在项目根目录添加 `_routes.json`：
+#### 后端域名
+在 `server/wrangler.toml` 中已配置：
+```toml
+routes = [
+  { pattern = "api.healing-rest-return.cyou", custom_domain = true }
+]
+```
 
+#### 前端域名
+在 Cloudflare Dashboard 中：
+1. 进入 Pages 项目 → **Settings → Custom Domains**
+2. 点击 **Set up a custom domain**
+3. 输入你的域名
+4. Cloudflare 会自动配置 SSL 证书
+
+---
+
+## API 接口
+
+### POST /api/chat/stream
+
+流式聊天接口，SSE 格式返回，支持中途取消。
+
+**请求头：**
+- `Content-Type: application/json`
+- `X-Access-Code: <your-code>`
+
+**请求体：**
 ```json
 {
-  "version": 1,
-  "include": ["/*"],
-  "exclude": ["/static/*"]
+  "message": "用户消息",
+  "sessionId": "会话ID",
+  "tool_choice": "auto"
 }
 ```
 
-或者在 Cloudflare Dashboard 中配置：
-1. 进入 Pages 项目 → **Settings → Functions**
-2. **Single Page Application** 切换为 ON
+**响应：** SSE 流，包含 `choices[0].delta.content` 和 `choices[0].delta.tool_calls`
 
-### 3.4 设置环境变量
+```bash
+curl -X POST https://api.healing-rest-return.cyou/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -H "X-Access-Code: your-code" \
+  -d '{"message": "我最近总是很焦虑"}'
+```
 
-在 Cloudflare Dashboard 中：
-1. **Settings → Environment Variables**
-2. 添加前端环境变量（去掉 `VITE_` 前缀，因为 Pages 会自动处理）：
+### POST /api/summarize
 
-| Variable Name | Value |
-|--------------|-------|
-| DASHSCOPE_API_KEY | sk-7dbc57c2db974c3ab... |
-| DASHSCOPE_MODEL | qwen-plus |
-| SUPABASE_URL | https://xxx.supabase.co |
-| SUPABASE_ANON_KEY | eyJhbGc... |
-| ACCESS_CODE | 你春天时相信的那句话 |
-| BACKEND_API_URL | https://liaoxinshe-backend.xxx.workers.dev |
+记忆淬炼接口，分析对话提取焦虑触发点。
 
-> 注意：Cloudflare Pages 的环境变量在构建时注入，如果使用 Vite 的 `import.meta.env`，变量必须以 `VITE_` 开头。
+**请求体：**
+```json
+{
+  "conversation": "对话内容"
+}
+```
 
-### 3.5 配置自定义域名
-
-1. 在 Cloudflare Dashboard 中进入 **Workers & Pages**
-2. 选择你的项目 → **Settings → Custom Domains**
-3. 点击 **Set up a custom domain**
-4. 输入你的域名（如 `yourdomain.com`）
-5. Cloudflare 会 自动配置 SSL证书
-
-如果域名是在其他注册商购买的，需要修改 DNS：
-- 添加一条 CNAME 记录指向 Cloudflare Pages分配的域名
+**响应：**
+```json
+{
+  "triggers": ["触发点1", "触发点2"],
+  "selfSoothingEfforts": ["努力1", "努力2"],
+  "summary": "简短描述"
+}
+```
 
 ---
 
-## 第四步：验证部署
+## 验证部署
 
-### 4.1 验证前端
-
-访问你的域名，检查：
-- [ ] 页面正常加载，显示疗心舍界面
-- [ ] 点击聊天图标，能正常对话
-- [ ] 点击左上角"成长年轮"图标，能打开记忆时间轴
-- [ ] 刷新 `/memory` 页面，不会404
-
-### 4.2 验证后端
+### 验证后端
 
 ```bash
-curl -X POST https://liaoxinshe-backend.xxx.workers.dev/api/chat \
+curl -X POST https://api.healing-rest-return.cyou/api/chat/stream \
   -H "Content-Type: application/json" \
-  -H "X-Access-Code: 你春天时相信的那句话" \
+  -H "X-Access-Code: your-code" \
   -d '{"message":"你好"}'
 ```
 
-返回 AI 回复 = 部署成功。
+返回 SSE 流 = 部署成功。
 
----
+### 验证前端
 
-## 第五步：更新 DNS 和域名解析
-
-如果你的域名目前在 Vercel/Railway 使用，迁移到 Cloudflare 后需要更新 DNS：
-
-1. 登录你的域名注册商（购买域名的平台）
-2. 修改 DNS 服务器为 Cloudflare：
-   - 在注册商设置中，将 nameserver 改为 Cloudflare 提供的地址
-   - ( Cloudflare 会提示你具体的 nameserver 地址)
-3. 在 Cloudflare Dashboard 中添加 DNS 记录：
-   - 前端：添加一条 CNAME 记录指向 Pages 项目
-   - 后端：Workers 不需要 DNS，直接使用 *.workers.dev 域名
+访问你的域名，检查：
+- [ ] 页面正常加载，显示松间心舍界面
+- [ ] 点击聊天图标，能正常对话
+- [ ] AI 回复流式显示
+- [ ] 点击停止按钮能中断 AI 回复
 
 ---
 
 ## 常见问题
 
 **Q: Cloudflare Workers 有哪些限制？**
-A: Workers 有 10ms CPU 时间限制和 128MB 内存限制（免费计划）。Express.js 完全兼容，但某些 Node.js API 需要使用 Web API 替代。
+A: Workers 有 10ms CPU 时间限制和 128MB 内存限制（免费计划）。Hono 框架完全兼容。
 
 **Q: 如何查看 Workers 日志？**
 A: `wrangler tail` 或在 Dashboard 的 **Logs** 中查看实时日志。
 
 **Q: Workers 计费方式？**
-A: 免费计划每月 10 万请求，超出 $5/百万请求。比 Railway 按小时计费更经济。
+A: 免费计划每月 10 万请求，超出 $5/百万请求。
 
-**Q: 原来的 Railway 后端可以保留吗？**
-A: 可以，但建议逐步迁移。可以在迁移期间保持两个后端，通过切换 `BACKEND_API_URL` 测试。
+**Q: 如何更新环境变量？**
+A: 使用 `npx wrangler secret put 变量名` 更新 Secrets，然后重新部署。
 
 **Q: 域名 SSL 证书问题？**
-A: Cloudflare 自动为你域名提供免费 SSL 证书。如果域名在其他注册商，确保 DNS 正确配置即可。
+A: Cloudflare 自动为你域名提供免费 SSL 证书。
+
+---
+
+## 本地开发
+
+### 启动后端
+```bash
+cd server
+npx wrangler dev
+```
+
+### 启动前端
+```bash
+npm run dev
+```
 
 ---
 
 ## 架构总结
 
 ```
-用户浏览器 → Cloudflare Pages (边缘节点) → Cloudflare Workers → 阿里云 DashScope
-                         ↓
-                  Supabase (记忆云同步)
+┌─────────────────────────────────────────────────────────────┐
+│                        用户浏览器                             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Cloudflare Pages                          │
+│                    (Vue 3 + Vite 前端)                       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Cloudflare Workers                        │
+│                    (Hono 后端服务)                           │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │ /api/chat   │  │ /api/summarize│  │ 工具调用路由       │  │
+│  │ /stream     │  │              │  │ executeTool()     │  │
+│  └─────────────┘  └──────────────┘  └────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    阿里云 DashScope                          │
+│                    (通义千问 API)                            │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Supabase                                │
+│                  (记忆云同步·可选)                           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 前端部署在 Cloudflare Pages，后端部署在 Cloudflare Workers，全部在 Cloudflare 全球边缘网络上，速度更快，安全性更高。
