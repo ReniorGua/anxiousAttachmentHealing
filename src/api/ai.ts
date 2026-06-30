@@ -1,7 +1,5 @@
 import type { ChatMessage } from '@/types/ai'
 import { simulateNetworkDelay } from '@/utils/mock'
-import { useGlobalStore } from '@/stores/global'
-import { useUserMemoryStore } from '@/stores/userMemory'
 
 export type ColorScheme = 'calm' | 'warm' | 'fresh' | 'serene' | 'natural' | 'default'
 
@@ -30,19 +28,6 @@ export interface EmotionResult {
 export interface ToolCallResult {
   toolName: string
   result: HealingAtmosphereResult | EmotionResult
-}
-
-// Global type for emotion analysis result (set by API, read by component)
-declare global {
-  interface Window {
-    __lastEmotionResult?: {
-      emotion: EmotionType
-      intensity?: number
-      colorScheme?: ColorScheme
-    }
-    __lastHealingComponent?: 'securityCard' | 'grounding' | 'waitingTimer' | 'breathing478' | 'energyRetraction' | 'somaticRadar' | 'innerChild' | 'listWriting' | 'freeWriting'
-    __lastListType?: string
-  }
 }
 
 /**
@@ -194,12 +179,6 @@ export function analyzeMessage(message: string): string {
  * Calls backend proxy which forwards to DashScope Qwen API
  */
 export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> {
-  const globalStore = useGlobalStore()
-  const userMemoryStore = useUserMemoryStore()
-
-  // Read memory context from localStorage and format as system prompt
-  userMemoryStore.loadFromStorage()
-
   // If real AI is disabled, use mock
   if (!ENABLE_REAL_AI) {
     await simulateNetworkDelay(1000, 2000)
@@ -266,67 +245,9 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
       usage: data.usage,
     })
 
-    // Handle tool calls from response
-    if (data.toolCalls && data.toolCalls.length > 0) {
-      console.log('[Real AI] Tool calls in response:', JSON.stringify(data.toolCalls))
-
-      for (const toolCall of data.toolCalls) {
-        console.log('[Real AI] Processing tool:', toolCall.toolName, 'success:', toolCall.result?.success)
-        if (toolCall.toolName === 'apply_healing_atmosphere' && toolCall.result?.success) {
-          const result = toolCall.result as HealingAtmosphereResult
-          const { themeColor, backgroundMusic, initialComfort, emotion } = result
-
-          console.log('[Real AI] Healing atmosphere result:', { themeColor, backgroundMusic, initialComfort, emotion })
-
-          // Apply healing atmosphere immediately
-          if (themeColor) {
-            console.log('[Real AI] Calling applyHealingAtmosphere...')
-            globalStore.applyHealingAtmosphere(themeColor, backgroundMusic, initialComfort)
-            console.log('[Real AI] applyHealingAtmosphere called')
-          }
-        }
-
-        // Handle ALL healing component tools (new and legacy names)
-        const healingToolNames = [
-          'showSecurityCard', 'showGrounding', 'showWaitingTimer',
-          'trigger_478_breathing', 'trigger_energy_retraction',
-          'trigger_somatic_radar', 'trigger_inner_child', 'trigger_security_card',
-          'trigger_list_writing', 'trigger_free_writing'
-        ]
-        if (healingToolNames.includes(toolCall.toolName) && toolCall.result?.success) {
-          const result = toolCall.result as any
-          if (result.component) {
-            window.__lastHealingComponent = result.component
-            console.log('[Real AI] Healing component stored:', result.component)
-          }
-        }
-      }
-    } else {
-      console.log('[Real AI] No tool calls in response')
-    }
-
-    // Clean content: remove any tool names that might appear in the response text
-    let cleanContent = data.content || ''
-    const toolNamePatterns = [
-      /trigger_list_writing/gi,
-      /trigger_free_writing/gi,
-      /trigger_478_breathing/gi,
-      /trigger_energy_retraction/gi,
-      /trigger_somatic_radar/gi,
-      /trigger_inner_child/gi,
-      /trigger_security_card/gi,
-      /trigger_waiting_timer/gi,
-      /trigger_grounding_five_senses/gi,
-    ]
-    for (const pattern of toolNamePatterns) {
-      cleanContent = cleanContent.replace(pattern, '')
-    }
-    // Clean up any dangling punctuation or whitespace at the end
-    cleanContent = cleanContent.replace(/[\s\.。，,]+$/g, '').trim()
-
     return {
       messageId: data.messageId,
-      content: cleanContent,
+      content: data.content || '',
       sessionId: data.sessionId,
       usage: data.usage,
       toolCalls: data.toolCalls,
@@ -351,12 +272,6 @@ export async function chatWithAI(params: AIChatParams): Promise<AIChatResponse> 
  * Tool calls are executed automatically during streaming
  */
 export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<string, void, unknown> {
-  const globalStore = useGlobalStore()
-  const userMemoryStore = useUserMemoryStore()
-
-  // Read memory context from localStorage
-  userMemoryStore.loadFromStorage()
-
   if (!ENABLE_REAL_AI) {
     // Mock streaming for demo
     const response = analyzeMessage(params.message)
@@ -437,21 +352,8 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
 
               // Check for tool call result from backend (after tool execution)
               if (parsed.tool_call_result) {
-                const result = parsed.tool_call_result
-                console.log('[Stream AI] Tool call result from backend:', JSON.stringify(result))
-                console.log('[Stream AI] Setting __lastHealingComponent to:', result?.component)
-                if (result?.component) {
-                  window.__lastHealingComponent = result.component
-                  console.log('[Stream AI] window.__lastHealingComponent is now:', result.component)
-                } else {
-                  console.log('[Stream AI] WARNING: result.component is undefined!')
-                }
-                if (result?.listType) {
-                  window.__lastListType = result.listType
-                }
+                // Tool call results are now handled in AIChatView.vue stream parsing
                 continue
-              } else {
-                console.log('[Stream AI] No tool_call_result in parsed. Available keys:', Object.keys(parsed))
               }
 
               // Check for tool calls in the stream (OpenAI format uses delta.tool_calls for streaming)
@@ -519,22 +421,6 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
               }
             } catch (e) {
               // Try to yield as plain text if not JSON
-              console.warn('[Stream AI] Failed to parse JSON, using as text:', data.substring(0, 100))
-              // But first check if it's actually a tool_call_result that we should handle
-              try {
-                const parsedErr = JSON.parse(data)
-                if (parsedErr?.tool_call_result) {
-                  console.log('[Stream AI] tool_call_result in catch block, handling it')
-                  const result = parsedErr.tool_call_result
-
-                  if (result.component) {
-                    window.__lastHealingComponent = result.component
-                  }
-                  continue
-                }
-              } catch (e2) {
-                // Not JSON or not tool_call_result, yield as plain text
-              }
               if (data && data !== '[DONE]') {
                 yield data
               }
@@ -544,8 +430,6 @@ export async function* streamChatWithAI(params: AIChatParams): AsyncGenerator<st
       }
     } finally {
       reader.releaseLock()
-      console.log('[Stream AI] Reader released')
-      console.log('[Stream AI] Final __lastHealingComponent:', (window as any).__lastHealingComponent)
     }
   } catch (error) {
     console.error('[Stream AI Error]', error)

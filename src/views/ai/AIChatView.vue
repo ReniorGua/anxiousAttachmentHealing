@@ -189,16 +189,17 @@
           ></textarea>
         </div>
         <button
-          type="submit"
-          :disabled="!inputMessage.trim() || isStreaming"
+          type="button"
+          :disabled="!inputMessage.trim() && !isStreaming"
           class="send-button"
           :class="{ active: inputMessage.trim() && !isStreaming }"
+          @click="isStreaming ? handleStop() : handleSubmit()"
         >
           <svg v-if="!isStreaming" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
           </svg>
-          <svg v-else class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="6" width="12" height="12" rx="1"></rect>
           </svg>
         </button>
       </form>
@@ -211,7 +212,6 @@ import { ref, nextTick, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useGlobalStore } from '@/stores/global'
 import { useUserMemoryStore } from '@/stores/userMemory'
-import { chatWithAI } from '@/api/ai'
 import SecurityCard from './components/SecurityCard.vue'
 import GroundingFiveSenses from './components/GroundingFiveSenses.vue'
 import WaitingTimer from './components/WaitingTimer.vue'
@@ -244,6 +244,7 @@ const isStreaming = ref(false)
 const streamingContent = ref('')
 const currentStreamingMessageId = ref<string | null>(null)
 const isAudioEnabled = ref(false)
+let abortController: AbortController | null = null
 
 const emotionCapsules = [
   { text: '☁️ 脑子很乱，停不下来' },
@@ -318,11 +319,12 @@ const toolToComponentMap: Record<string, HealingComponentType> = {
  * 🎯 核心修复：原生 Fetch 拦截流
  * 彻底抛弃旧版解析器，兼容 OpenAI 标准流，并增加对「AI 恶意打印 JSON」的正则拦截
  */
-const handleStreamingResponse = async (userMessage: string) => {
+const handleStreamingResponse = async (userMessage: string, signal?: AbortSignal) => {
   let fullContent = ''
   let healingComponent: HealingComponentType = null
   let currentToolName = ''
-  let toolWasCalled = false
+  let toolArgumentsBuffer = ''
+  let isAborted = false
 
   try {
     const API_BASE = import.meta.env.VITE_BACKEND_API_URL || 'http://127.0.0.1:8787'
@@ -334,7 +336,12 @@ const handleStreamingResponse = async (userMessage: string) => {
         'Content-Type': 'application/json',
         'x-access-code': localStorage.getItem('access_code') || ''
       },
-      body: JSON.stringify({ message: userMessage, sessionId: aiChatStore.currentSessionId })
+      body: JSON.stringify({
+        message: userMessage,
+        sessionId: aiChatStore.currentSessionId,
+        tool_choice: 'auto'  // 强制模型在需要时必须输出 tool_calls
+      }),
+      signal
     })
 
     if (!response.ok) throw new Error(`HTTP Error: ${response.status}`)
@@ -367,7 +374,6 @@ const handleStreamingResponse = async (userMessage: string) => {
               const delta = parsed.choices?.[0]?.delta
               const directContent = parsed.output?.choices?.[0]?.message?.content || parsed.choices?.[0]?.message?.content
               const textContent = parsed.output?.text
-
               let chunkContent = ''
               if (delta?.content) {
                 chunkContent = delta.content
@@ -377,19 +383,21 @@ const handleStreamingResponse = async (userMessage: string) => {
                 chunkContent = textContent
               }
 
-              // 1. 标准内容拼接
-              if (chunkContent) {
+              // 1. 标准内容拼接（跳过含有工具调用的 chunk）
+              if (chunkContent && !delta?.tool_calls) {
                 fullContent += chunkContent
                 streamingContent.value = fullContent
                 scrollToBottom()
               }
 
-              // 2. 拦截标准 Tool Calls
+              // 2. 拦截并累加工具调用参数
               if (delta?.tool_calls && delta.tool_calls.length > 0) {
                 const toolCall = delta.tool_calls[0]
                 if (toolCall.function?.name) {
                   currentToolName = toolCall.function.name
-                  toolWasCalled = true
+                }
+                if (toolCall.function?.arguments) {
+                  toolArgumentsBuffer += toolCall.function.arguments
                 }
               }
             } catch (e) {
@@ -400,49 +408,146 @@ const handleStreamingResponse = async (userMessage: string) => {
       }
     }
 
-    // 如果检测到工具调用但流式响应没有返回实际内容，则切换到非流式接口获取工具执行结果
-    if (toolWasCalled && !fullContent.trim()) {
+    // 3. 流结束后解析工具参数，映射到 healingComponent
+    if (toolArgumentsBuffer) {
       try {
-        const nonStreamResult = await chatWithAI({ message: userMessage, sessionId: aiChatStore.currentSessionId, stream: false })
-        if (nonStreamResult?.content) {
-          fullContent = nonStreamResult.content
-        }
-        // 从非流式响应中提取 healingComponent
-        if (nonStreamResult?.toolCalls?.[0]?.result?.component) {
-          healingComponent = nonStreamResult.toolCalls[0].result.component as HealingComponentType
+        const args = JSON.parse(toolArgumentsBuffer)
+        const practiceId = args.practice_id || args.practiceId
+        if (practiceId && toolToComponentMap[practiceId]) {
+          healingComponent = toolToComponentMap[practiceId] as HealingComponentType
         }
       } catch (e) {
-        // 非流式调用失败，保持使用流式响应收集到的内容（可能为空或只有部分）
+        console.warn('[Stream] Failed to parse tool arguments:', e)
+      }
+    }
+
+    // 4. 强制修复机制：检测到模型承认需要调用工具但未输出 tool_calls
+    if (!toolArgumentsBuffer && !healingComponent) {
+      const shouldTriggerTool = /符合.*练习情境|需要.*练习|引导.*释放|进行.*练习/gi.test(fullContent)
+      if (shouldTriggerTool) {
+        console.warn('[Stream] 检测到模型承认需要工具但未输出 tool_calls，发送修复请求')
+        try {
+          const repairResponse = await fetch(`${API_BASE}/api/chat/stream`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-code': localStorage.getItem('access_code') || ''
+            },
+            body: JSON.stringify({
+              message: `请基于刚才的对话，直接调用 Function Calling 输出对应的工具调用，不要口头描述你打算做什么。`,
+              sessionId: aiChatStore.currentSessionId,
+              tool_choice: 'auto'
+            }),
+            signal
+          })
+          if (repairResponse.ok) {
+            // 解析修复响应的 tool_calls
+            const repairReader = repairResponse.body?.getReader()
+            const repairDecoder = new TextDecoder('utf-8')
+            let repairBuffer = ''
+            let repairToolArgs = ''
+            let repairToolName = ''
+
+            if (repairReader) {
+              while (true) {
+                const { done, value } = await repairReader.read()
+                if (done) break
+                repairBuffer += repairDecoder.decode(value, { stream: true })
+                const repairLines = repairBuffer.split('\n')
+                repairBuffer = repairLines.pop() || ''
+
+                for (const line of repairLines) {
+                  const trimmed = line.trim()
+                  if (!trimmed || trimmed.startsWith(':') || trimmed.startsWith('data:')) continue
+                  try {
+                    const parsed = JSON.parse(trimmed.startsWith('data:') ? trimmed.slice(5).trim() : trimmed)
+                    if (parsed.choices?.[0]?.delta?.tool_calls) {
+                      const tc = parsed.choices[0].delta.tool_calls[0]
+                      if (tc.function?.name) repairToolName = tc.function.name
+                      if (tc.function?.arguments) repairToolArgs += tc.function.arguments
+                    }
+                  } catch {}
+                }
+              }
+              repairReader.releaseLock()
+            }
+
+            if (repairToolArgs) {
+              try {
+                const args = JSON.parse(repairToolArgs)
+                const practiceId = args.practice_id || args.practiceId
+                if (practiceId && toolToComponentMap[practiceId]) {
+                  healingComponent = toolToComponentMap[practiceId] as HealingComponentType
+                  // 清理掉fullContent中关于练习的描述
+                  fullContent = fullContent.replace(/符合.*练习情境|需要.*练习|引导.*释放|进行.*练习/gi, '').trim()
+                }
+              } catch (e) {
+                console.warn('[Stream] 修复请求解析失败:', e)
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[Stream] 修复请求失败:', e)
+        }
       }
     }
   } catch (error: any) {
-    const isRateLimit = error?.message?.includes('429')
-    if (isRateLimit) {
-      fullContent = '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。'
+    // 处理中断：用户点击停止按钮
+    if (error.name === 'AbortError' || error instanceof DOMException) {
+      console.warn('[Stream] Stream aborted by user')
+      isAborted = true
     } else {
-      // 只有在【完全没有收到任何内容】的情况下才允许重试，否则坚决不 Fallback
-      if (!fullContent) {
-        try {
-          const fallback = await chatWithAI({ message: userMessage, sessionId: aiChatStore.currentSessionId, stream: false })
-          fullContent = fallback.content || '网络连接不稳定，请稍后重试。'
-        } catch (fbError) {}
+      const isRateLimit = error?.message?.includes('429')
+      if (isRateLimit) {
+        fullContent = '你今天的情绪已经释放得足够多了，请先休息一下，喝杯水吧。'
+      } else {
+        fullContent = '网络连接不稳定，请稍后重试。'
       }
     }
   }
 
-  // --- 防护网：清理残留的 JSON 片段 ---
+  // --- 防护网：清理残留的 JSON 片段和工具名 ---
   if (currentToolName) {
-    // 抹除包含 function.name 的 JSON 结构（DashScope SSE 格式）
-    fullContent = fullContent.replace(/```json\s*[\s\S]*?```/g, '').trim();
-    fullContent = fullContent.replace(/\{[^}]*"name"\s*:\s*"[^"]*"[^}]*\}/g, '').trim();
+    fullContent = fullContent.replace(/```json\s*[\s\S]*?```/g, '').trim()
+    fullContent = fullContent.replace(/\{[^}]*"name"\s*:\s*"[^"]*"[^}]*\}/g, '').trim()
   }
+  // 清理所有工具名
+  const toolNamePatterns = [
+    /trigger_list_writing/gi,
+    /trigger_free_writing/gi,
+    /trigger_478_breathing/gi,
+    /trigger_energy_retraction/gi,
+    /trigger_somatic_radar/gi,
+    /trigger_inner_child/gi,
+    /trigger_security_card/gi,
+    /trigger_waiting_timer/gi,
+    /trigger_grounding_five_senses/gi,
+    /trigger_affirmation_echo/gi,
+    /trigger_belief_transformation/gi,
+    /trigger_resistance_exhaustion/gi,
+    /trigger_fear_release/gi,
+    /trigger_deep_release/gi,
+    /trigger_personal_law/gi,
+    /trigger_future_vision/gi,
+    /trigger_birth_memory/gi,
+    /trigger_affirmation_30/gi,
+  ]
+  for (const pattern of toolNamePatterns) {
+    fullContent = fullContent.replace(pattern, '')
+  }
+  fullContent = fullContent.replace(/[\s\.。，,]+$/g, '').trim()
 
   // 防止画面空无一物：当检测到工具调用但没有内容时，提供友好的默认消息
   if ((healingComponent || currentToolName) && !fullContent.trim()) {
     fullContent = '我为你准备了这个练习，我们一起试试看。'
   }
 
-  return { content: fullContent, healingComponent }
+  return { content: fullContent, healingComponent, isAborted }
+}
+
+const handleStop = () => {
+  abortController?.abort()
+  abortController = null
 }
 
 const handleSubmit = async () => {
@@ -458,7 +563,18 @@ const handleSubmit = async () => {
     isStreaming.value = true
     streamingContent.value = ''
 
-    const { content, healingComponent } = await handleStreamingResponse(message)
+    abortController = new AbortController()
+    const { content, healingComponent, isAborted } = await handleStreamingResponse(message, abortController.signal)
+    abortController = null
+
+    // 中断处理：直接返回就绪状态，不保存任何内容
+    if (isAborted) {
+      console.warn('[Chat] Stream aborted, returning to ready state')
+      streamingContent.value = ''
+      isStreaming.value = false
+      await nextTick()
+      return
+    }
 
     // 🎯 核心修复：先同步关闭流状态，并强制等待 DOM 更新，彻底掐断「两个回复框重叠」的时序 Bug
     streamingContent.value = ''
@@ -479,6 +595,7 @@ const handleSubmit = async () => {
 
   } catch (error) {
     console.error('[Chat] Error:', error)
+    abortController = null
     isStreaming.value = false
     streamingContent.value = ''
   }

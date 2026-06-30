@@ -151,7 +151,11 @@ function getClientIp(c) {
 const BASE_SYSTEM_PROMPT = `【最高优先级约束 - 严禁代码泄露】
 1. 只能输出纯文本，绝对禁止使用 Markdown 格式（禁用加粗、标题、斜体）。
 2. 【极其重要】你的文本回复中绝对不能出现任何函数名（如 trigger_future_vision）、参数（如 reason）或类似 \`call:default_api\` 的调用代码！工具调用必须通过底层机制默默完成，不要把调用的过程写给用户看。
-3. 你的纯文本回复不要描述练习步骤。
+3. 【工具调用严格约束】当你决定执行任何练习（如 trigger_478_breathing 等）时，必须且只能通过 Function Calling 底层机制输出参数。绝对不可以在回复的文本中提及你正在调用工具，也绝对不要在文本中解释选择该工具的原因。直接执行！
+【协议：工具调用必须是原子操作】
+1. 严禁在 reasoning_content 中讨论或预告你要执行什么练习。
+2. 当用户表现出特定情绪（如缺乏安全感、内耗）时，不要在对话中试图通过语言解释选择该工具的理由。
+3. 一旦判定满足特定工具（如 trigger_inner_child）的触发条件，必须直接在 API 输出层调用工具。
 
 你是一位如自然般包容、提供沉浸式且慢节奏疗愈陪伴的向导。你的核心任务是深呼吸、倾听，用最佳的疗愈话语帮助用户疗愈，并将用户引导至最适合当下的疗愈练习。
 
@@ -181,7 +185,7 @@ const BASE_SYSTEM_PROMPT = `【最高优先级约束 - 严禁代码泄露】
 - 长期被压抑/背负难以启齿的沉重秘密 -> 强制调用 trigger_deep_release
 
 对话流规则：
-如果用户输入消极情绪，请你回复疗愈内容并引导用户进行以上练习，只要有上述情绪标签，强制调用工具！
+当你决定调用疗愈练习时，除了严格输出工具参数外，必须在普通回复（content）中附带疗愈华语进行过度安抚，例如'我感受到了你的疲惫，我们先来做一个深呼吸'，然后再执行工具。
 仅当用户单纯打招呼、分享开心日常或明确拒绝练习时，使用纯文本回复。`
 /**
  * POST /api/chat
@@ -263,13 +267,11 @@ app.post('/api/chat', async (c) => {
     const data = await dashscopeResponse.json()
     // 兼容 Qwen3 的 output 格式和标准 choices 格式
     const messageData = data.output?.choices?.[0]?.message || data.choices?.[0]?.message || {}
-    const toolCalls = messageData.tool_calls
-    const firstContent = messageData.content
+    const toolCalls = data.choices?.[0]?.message?.tool_calls || data.output?.choices?.[0]?.message?.tool_calls
 
-    console.log(`[Chat] Response structure keys: ${Object.keys(data).join(', ')}`)
-    console.log(`[Chat] messageData keys: ${Object.keys(messageData).join(', ')}`)
+    // console.log(`[Chat] Response structure keys: ${JSON.stringify(data)}`)
+    console.log(`[Chat] messageData: ${JSON.stringify(messageData)}`)
     console.log(`[Chat] toolCalls: ${JSON.stringify(toolCalls)}`)
-    console.log(`[Chat] firstContent: ${firstContent}`)
 
     if (toolCalls && toolCalls.length > 0) {
       console.log(`[Chat] Tool calls detected: ${toolCalls.length}`)
@@ -285,7 +287,7 @@ app.post('/api/chat', async (c) => {
       }
 
       // 优先使用模型在工具调用之前输出的原始内容
-      const aiOriginalContent = messageData.reasoning_content || messageData.content || ''
+      const aiOriginalContent = messageData.content || ''
       const finalContent = aiOriginalContent.trim()
         ? aiOriginalContent.trim()
         : toolResults[0]?.result?.message || '我为你准备了这个练习，我们一起试试看。'
@@ -300,37 +302,7 @@ app.post('/api/chat', async (c) => {
       })
     }
 
-    // 如果 content 是 stringified JSON 格式的工具调用，尝试解析并执行
-    if (firstContent && typeof firstContent === 'string' && firstContent.includes('"name"') && firstContent.includes('"arguments"')) {
-      try {
-        const parsedContent = JSON.parse(firstContent)
-        if (parsedContent.name && parsedContent.arguments) {
-          console.log(`[Chat] Detected stringified tool call: ${parsedContent.name}`)
-          const fakeToolCall = {
-            id: `call-auto-${Date.now()}`,
-            function: {
-              name: parsedContent.name,
-              arguments: typeof parsedContent.arguments === 'string' ? parsedContent.arguments : JSON.stringify(parsedContent.arguments)
-            }
-          }
-          const result = await executeTool(fakeToolCall)
-          const finalContent = result.message || '我为你准备了这个练习，我们一起试试看。'
-          console.log(`[Chat] Stringified tool - AI final content: ${finalContent}`)
-          return c.json({
-            messageId: `msg-${Date.now()}`,
-            content: finalContent,
-            sessionId: sessionId || `session-${Date.now()}`,
-            toolCalls: [{ toolCallId: fakeToolCall.id, toolName: fakeToolCall.function.name, result }],
-            usage: data.usage || {},
-          })
-        }
-      } catch (e) {
-        console.log(`[Chat] Failed to parse content as JSON: ${e.message}`)
-      }
-    }
-
-    const aiResponse = messageData.content || firstContent || '谢谢你分享这些。我听到了，愿意继续听你说。'
-    console.log(`[Chat] AI direct response: ${aiResponse}`)
+ const aiResponse = data.choices?.[0]?.message?.content || '谢谢你分享这些。我听到了，愿意继续听你说。'
 
     return c.json({
       messageId: `msg-${Date.now()}`,
@@ -391,13 +363,7 @@ app.post('/api/chat/stream', async (c) => {
       tools: TOOLS // 確保工具列表被傳入
     }
 
-    // 添加60秒超时保护
-    const fetchController = new AbortController()
-    const fetchTimeout = setTimeout(() => fetchController.abort(), 60000)
-
-    let response
-    try {
-      response = await fetch(
+    const response = await fetch(
         'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
         {
           method: 'POST',
@@ -407,82 +373,16 @@ app.post('/api/chat/stream', async (c) => {
             'X-DashScope-SSE': 'enable',
           },
           body: JSON.stringify(requestBody),
-          signal: fetchController.signal,
         }
       )
-    } finally {
-      clearTimeout(fetchTimeout)
-    }
 
     if (!response.ok) {
       throw new Error(`DashScope API error: ${response.status}`)
     }
 
-    // 读取流式内容并记录日志
-    const reader = response.body?.getReader()
-    const chunks = []
-    let fullContent = ''
-
-    if (reader) {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        chunks.push(value)
-        // 尝试解码并提取文本内容（不完美但够用）
-        try {
-          const text = new TextDecoder('utf-8').decode(value, { stream: true })
-          fullContent += text
-        } catch (e) {}
-      }
-    }
-
-    // 合并所有 chunks
-    const combined = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0))
-    let offset = 0
-    for (const chunk of chunks) {
-      combined.set(chunk, offset)
-      offset += chunk.length
-    }
-
-    // 解析 SSE 数据，提取 AI 回复文本（包括 reasoning_content 和 content）
-    let aiTextContent = ''
-    let foundContent = false
-    let foundReasoning = false
-    const lines = fullContent.split('\n')
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('data:')) {
-        const dataStr = trimmed.slice(5).trim()
-        if (dataStr && dataStr !== '[DONE]') {
-          try {
-            const parsed = JSON.parse(dataStr)
-            const content = parsed.choices?.[0]?.delta?.content
-            const reasoning = parsed.choices?.[0]?.delta?.reasoning_content
-            const outputText = parsed.output?.text
-            if (content) {
-              aiTextContent += content
-              foundContent = true
-            }
-            if (reasoning) {
-              aiTextContent += reasoning
-              foundReasoning = true
-            }
-            if (outputText) {
-              aiTextContent += outputText
-              foundContent = true
-            }
-          } catch (e) {}
-        }
-      }
-    }
-    console.log(`[${requestId}] Found content=${foundContent}, reasoning=${foundReasoning}`)
-
-    console.log(`[${requestId}] Stream raw:\n${fullContent.substring(0, 1000)}`)
-    console.log(`[${requestId}] AI parsed text: ${aiTextContent || '(empty)'}`)
-    console.log(`[${requestId}] === STREAM COMPLETE ===`)
-
-    // 返回原始流
-    return new Response(combined, {
+    // 將 DashScope 的流直接作為 Response 返回，實現透明透傳
+    // Hono 的 CORS 中介軟體會自動處理跨域頭
+    return new Response(response.body, {
       status: response.status,
       headers: {
         'Content-Type': 'text/event-stream',
