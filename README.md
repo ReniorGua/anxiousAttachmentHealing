@@ -108,15 +108,6 @@ npm run dev
 | 未来愿景 (FutureVision) | 用户失去希望 |
 | 出生记忆 (BirthMemory) | 用户有创伤根源 |
 
-### 3. 安全感卡片 (SecurityCard)
-
-莫兰迪色系的温暖卡片，点击即可获得一句自我肯定的话语。
-
-### 4. 书写疗愈
-
-- **清单书写 (ListWriting)**: 通过结构化问题引导用户梳理情绪
-- **自由书写 (FreeWriting)**: 无评判的自由表达出口
-
 ## 目录结构
 
 ```
@@ -224,8 +215,8 @@ curl -X POST https://api.healing-rest-return.cyou/api/chat/stream \
 
 ```env
 VITE_DASHSCOPE_API_KEY=your-api-key
-VITE_DASHSCOPE_MODEL=qwen-plus
-VITE_BACKEND_API_URL=http://localhost:8787
+VITE_DASHSCOPE_MODEL=you-ai-model
+VITE_BACKEND_API_URL=local-backend-api-url
 ```
 
 ### 生产环境
@@ -233,11 +224,6 @@ VITE_BACKEND_API_URL=http://localhost:8787
 部署在 Cloudflare Workers，参考 DEPLOY.md 进行配置。
 
 ## 获取 API Key
-
-### 阿里云 DashScope
-1. 访问 https://dashscope.console.aliyun.com/apiKey
-2. 创建 API Key
-3. 选择模型：qwen-turbo（速度快）或 qwen-plus（效果更好）
 
 ### Supabase (可选)
 1. 访问 https://supabase.com/dashboard
