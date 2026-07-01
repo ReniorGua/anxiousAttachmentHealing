@@ -215,7 +215,7 @@ app.post('/api/chat', async (c) => {
       return c.json({ error: 'Invalid request', message: 'Request body must be valid JSON' }, 400)
     }
 
-    const { message, sessionId, tools = [], systemPrompt: extraSystemPrompt } = body
+    const { message, sessionId, history = [], tools = [], systemPrompt: extraSystemPrompt } = body
 
     if (!message || typeof message !== 'string') {
       return c.json({ error: 'Invalid request', message: 'Message is required and must be a string' }, 400)
@@ -249,9 +249,10 @@ app.post('/api/chat', async (c) => {
             model: model,
             messages: [
               { role: 'system', content: mergedSystemPrompt },
+              ...history.slice(-20).map(h => ({ role: h.role, content: h.content })),
               { role: 'user', content: message }
             ],
-            tools: TOOLS // <--- 【關鍵修復】：必須把工具列表傳給模型
+            tools: TOOLS
           }),
           signal: fetchController.signal,
         }
@@ -346,7 +347,7 @@ app.post('/api/chat/stream', async (c) => {
       return c.json({ error: 'Invalid request', message: 'Request body must be valid JSON' }, 400)
     }
 
-    const { message, sessionId, systemPrompt: extraSystemPrompt } = body
+    const { message, sessionId, history = [], systemPrompt: extraSystemPrompt } = body
 
     const apiKey = c.env.DASHSCOPE_API_KEY
     const model = c.env.DASHSCOPE_MODEL || 'qwen-plus'
@@ -354,11 +355,15 @@ app.post('/api/chat/stream', async (c) => {
       ? `${BASE_SYSTEM_PROMPT}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
       : BASE_SYSTEM_PROMPT
 
+    // 最多保留最近 20 条历史消息，防止超出上下文窗口
+    const recentHistory = history.slice(-20)
+
     // 構建標準的 OpenAI 格式請求
     const requestBody = {
       model: model,
       messages: [
         { role: 'system', content: mergedSystemPrompt },
+        ...recentHistory.map(h => ({ role: h.role, content: h.content })),
         { role: 'user', content: message }
       ],
       stream: true,

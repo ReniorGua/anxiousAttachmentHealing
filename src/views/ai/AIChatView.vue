@@ -273,7 +273,8 @@ const handleStreamingResponse = async (userMessage: string, signal?: AbortSignal
       body: JSON.stringify({
         message: userMessage,
         sessionId: aiChatStore.currentSessionId,
-        tool_choice: 'auto'  // 强制模型在需要时必须输出 tool_calls
+        history: aiChatStore.currentMessages.map(m => ({ role: m.role, content: m.content })),
+        tool_choice: 'auto'
       }),
       signal
     })
@@ -291,7 +292,7 @@ const handleStreamingResponse = async (userMessage: string, signal?: AbortSignal
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        buffer = lines.pop() || '' // 保留未完整的区块
+        buffer = lines.pop() || ''
 
         for (const line of lines) {
           const trimmedLine = line.trim()
@@ -304,7 +305,6 @@ const handleStreamingResponse = async (userMessage: string, signal?: AbortSignal
             try {
               const parsed = JSON.parse(dataStr)
 
-              // 支持多种响应格式：OpenAI 格式 / DashScope 格式 / output.text 格式
               const delta = parsed.choices?.[0]?.delta
               const directContent = parsed.output?.choices?.[0]?.message?.content || parsed.choices?.[0]?.message?.content
               const textContent = parsed.output?.text
@@ -370,6 +370,7 @@ const handleStreamingResponse = async (userMessage: string, signal?: AbortSignal
             body: JSON.stringify({
               message: `请基于刚才的对话，直接调用 Function Calling 输出对应的工具调用，不要口头描述你打算做什么。`,
               sessionId: aiChatStore.currentSessionId,
+              history: aiChatStore.currentMessages.map(m => ({ role: m.role, content: m.content })),
               tool_choice: 'auto'
             }),
             signal
