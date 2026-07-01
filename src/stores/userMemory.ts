@@ -474,8 +474,12 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
   // =====================================================
 
   function getContextSummary(): string {
-    const recentTriggers = triggers.value.slice(0, 2)
-    const recentEfforts = selfSoothingEfforts.value.slice(0, 2)
+    const now = Date.now()
+    const twentyFourHours = 24 * 60 * 60 * 1000
+    const cutoff = now - twentyFourHours
+
+    const recentTriggers = triggers.value.filter(t => t.timestamp >= cutoff).slice(0, 2)
+    const recentEfforts = selfSoothingEfforts.value.filter(e => e.timestamp >= cutoff).slice(0, 2)
 
     if (recentTriggers.length === 0 && recentEfforts.length === 0) {
       return ''
@@ -485,11 +489,12 @@ export const useUserMemoryStore = defineStore('userMemory', () => {
 
     if (recentTriggers.length > 0) {
       const triggerTexts = recentTriggers.map(t => `"${t.content}"`).join('和')
+      console.log('[UserMemory] Injecting 24h triggers into context:', triggerTexts)
       sentences.push(`我记得你之前提到过，${triggerTexts}。`)
     }
 
     if (recentEfforts.length > 0) {
-      const effortTexts = recentEfforts.map(e => ` "${e.content}" `).join('、')
+      const effortTexts = recentEfforts.map(e => `"${e.content}"`).join('、')
       if (recentEfforts.length === 1) {
         sentences.push(`我也记得你曾尝试过${recentEfforts[0].content}——你能这样为自己努力，真的很了不起。`)
       } else {

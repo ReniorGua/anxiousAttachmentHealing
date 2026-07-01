@@ -6,7 +6,6 @@
 
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { stream } from 'hono/streaming'
 
 // Initialize Hono app
 const app = new Hono()
@@ -14,17 +13,16 @@ const app = new Hono()
 // 1. 终极 CORS 中间件配置
 app.use('*', cors({
   origin: (origin) => origin || '*',
-  // 必须把前端可能带上的所有 Header 都放行
   allowHeaders: ['Content-Type', 'X-Access-Code', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'Cache-Control'],
   allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
   credentials: true,
   maxAge: 86400,
 }))
 
-// 2. 强制接管所有 OPTIONS 预检请求（解决浏览器顽固跨域拦截）
+// 2. 强制接管所有 OPTIONS 预检请求
 app.options('*', (c) => c.text('', 204))
 
-// 3. 全局 404 侦探：如果前端路径写错，清楚地告诉前端错在哪
+// 3. 全局 404 侦探
 app.notFound((c) => {
   console.warn(`[404 Not Found] Requested path: ${c.req.path}`)
   return c.json({
@@ -48,115 +46,103 @@ const TOOLS = [
             type: 'string',
             description: '根据 System Prompt 的分诊逻辑树，选择最匹配的练习组件 ID',
             enum: [
-              'trigger_478_breathing', 
-              'trigger_somatic_radar', 
+              'trigger_478_breathing',
+              'trigger_somatic_radar',
               'trigger_grounding_five_senses',
-              'trigger_waiting_timer', 
-              'trigger_energy_retraction', 
+              'trigger_waiting_timer',
+              'trigger_energy_retraction',
               'trigger_inner_child',
-              'trigger_affirmation_echo', 
-              'trigger_fear_release', 
+              'trigger_affirmation_echo',
+              'trigger_fear_release',
               'trigger_resistance_exhaustion',
-              'trigger_affirmation_30', 
-              'trigger_personal_law', 
+              'trigger_affirmation_30',
+              'trigger_personal_law',
               'trigger_birth_memory',
-              'trigger_deep_release', 
+              'trigger_deep_release',
               'trigger_future_vision'
             ]
           },
-          reason: { 
-            type: 'string', 
-            description: '内部系统日志：简述触发此路由判定的核心依据。注意：此字段对用户不可见，请客观简述。' 
+          reason: {
+            type: 'string',
+            description: '内部系统日志：简述触发此路由判定的核心依据。'
           }
         },
         required: ['practice_id', 'reason']
       }
     }
   }
-];
-
-// Color psychology presets for different emotions
-const EMOTION_PRESETS = {
-  anxiety: { themeColor: '#F59E0B', backgroundMusic: 'https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3', initialComfort: '深呼吸，我在这里陪伴你' },
-  depression: { themeColor: '#F59E0B', backgroundMusic: 'https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3', initialComfort: '阳光在等你，慢慢来' },
-  stress: { themeColor: '#10B981', backgroundMusic: 'https://assets.mixkit.co/active_storage/sfx/123/123-preview.mp3', initialComfort: '深呼吸，放松一下' },
-  anger: { themeColor: '#8B5CF6', backgroundMusic: 'https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3', initialComfort: '慢慢来，我理解你' },
-  fear: { themeColor: '#6366F1', backgroundMusic: 'https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3', initialComfort: '别怕，我在身边' },
-  loneliness: { themeColor: '#78716C', backgroundMusic: 'https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3', initialComfort: '你不是一个人' }
-}
+]
 
 /**
  * Execute a tool call
  */
 async function executeTool(toolCall) {
-  const { name, arguments: argsRaw } = toolCall.function;
-  
-  let args = {};
+  const { name, arguments: argsRaw } = toolCall.function
+
+  let args = {}
   if (argsRaw) {
     if (typeof argsRaw === 'string') {
       try { args = JSON.parse(argsRaw) } catch (e) { args = { _raw: argsRaw } }
     } else if (typeof argsRaw === 'object') {
-      args = argsRaw;
+      args = argsRaw
     }
   }
 
-  // 拦截我们的超级路由工具
-  let targetComponent = name;
+  let targetComponent = name
   if (name === 'route_healing_practice') {
-    targetComponent = args.practice_id; // 从参数中提取出它真正想调用的练习 ID
-    console.log(`[Tool Call] Router distributed to: ${targetComponent}, Reason: ${args.reason}`);
+    targetComponent = args.practice_id
+    console.log(`[Tool Call] Router distributed to: ${targetComponent}, Reason: ${args.reason}`)
   } else {
-    console.log(`[Tool Call] Executing direct tool: ${name}`);
+    console.log(`[Tool Call] Executing direct tool: ${name}`)
   }
 
-  // 下面直接把之前的 switch(name) 改成 switch(targetComponent) 即可
   switch (targetComponent) {
     case 'trigger_478_breathing':
-      return { success: true, component: 'breathing478', message: '我们先做4-7-8呼吸法，让身体平静下来 🌊' };
+      return { success: true, component: 'breathing478', message: '我们先做4-7-8呼吸法，让身体平静下来 🌊' }
     case 'trigger_energy_retraction':
-      return { success: true, component: 'energyRetraction', message: '我听到了你内心的风暴。让我们把向外的触手收回来 🐙' };
+      return { success: true, component: 'energyRetraction', message: '我听到了你内心的风暴。让我们把向外的触手收回来 🐙' }
     case 'trigger_somatic_radar':
-      return { success: true, component: 'somaticRadar', message: '谢谢你告诉我身体的感觉。让我们一起来听听它在说什么 🔍' };
+      return { success: true, component: 'somaticRadar', message: '谢谢你告诉我身体的感觉。让我们一起来听听它在说什么 🔍' }
     case 'trigger_inner_child':
-      return { success: true, component: 'innerChild', message: '我听到了你内心的那个小孩。让我们一起回去看看小小的你 💜' };
+      return { success: true, component: 'innerChild', message: '我听到了你内心的那个小孩。让我们一起回去看看小小的你 💜' }
     case 'trigger_affirmation_echo':
-      return { success: true, component: 'affirmationEcho', message: '我听到了你内心的不确定。我们一起把你的声音变成力量 ✦' };
+      return { success: true, component: 'affirmationEcho', message: '我听到了你内心的不确定。我们一起把你的声音变成力量 ✦' }
     case 'trigger_resistance_exhaustion':
-      return { success: true, component: 'resistanceExhaustion', message: '我听到了你内心的阻抗。让它说完，直到它安静下来 ◈' };
+      return { success: true, component: 'resistanceExhaustion', message: '我听到了你内心的阻抗，让它说完，直到它安静下来 ◈' }
     case 'trigger_deep_release':
-      return { success: true, component: 'deepRelease', message: '我听到了你深处的这些声音。让我们为它们找一个出口 ⛓' };
+      return { success: true, component: 'deepRelease', message: '我听到了你深处的这些声音。让我们为它们找一个出口 ⛓' }
     case 'trigger_future_vision':
-      return { success: true, component: 'futureVision', message: '我听到了你对前路的迷茫。让我们慢慢在雾中找找方向 🌿' };
+      return { success: true, component: 'futureVision', message: '我听到了你对前路的迷茫。让我们慢慢在雾中找找方向 🌿' }
     case 'trigger_waiting_timer':
-      return { success: true, component: 'waitingTimer', message: '安静地等一等，把这20分钟交给自己 ⏰' };
+      return { success: true, component: 'waitingTimer', message: '安静地等一等，把这20分钟交给自己 ⏰' }
     case 'trigger_grounding_five_senses':
-      return { success: true, component: 'grounding', message: '思绪飘得太远了，让我们慢慢回到此时此刻 🌍' };
+      return { success: true, component: 'grounding', message: '思绪飘得太远了，让我们慢慢回到此时此刻 🌍' }
     case 'trigger_fear_release':
-      return { success: true, component: 'fearRelease', message: '我听到你心里有些害怕。来，我们一起把它写下来 🕯️' };
+      return { success: true, component: 'fearRelease', message: '我听到你心里有些害怕。来，我们一起把它写下来 🕯️' }
     case 'trigger_personal_law':
-      return { success: true, component: 'personalLaw', message: '我听到了你内心的自我审判。让我们一起来面对它 🔮' };
+      return { success: true, component: 'personalLaw', message: '我听到了你内心的自我审判。让我们一起来面对它 🔮' }
     case 'trigger_birth_memory':
-      return { success: true, component: 'birthMemory', message: '让我们一起回到生命的源头，重新抱抱自己 ✨' };
+      return { success: true, component: 'birthMemory', message: '让我们一起回到生命的源头，重新抱抱自己 ✨' }
     case 'trigger_affirmation_30':
-      return { success: true, component: 'affirmation30', message: '想要长出一棵大树，我们需要每天浇一点水 🌱' };
+      return { success: true, component: 'affirmation30', message: '想要长出一棵大树，我们需要每天浇一点水 🌱' }
     default:
-      return { success: false, error: `Unknown routing target: ${targetComponent}` };
+      return { success: false, error: `Unknown routing target: ${targetComponent}` }
   }
 }
 
-function getClientIp(c) {
-  return c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'unknown'
-}
-
-const BASE_SYSTEM_PROMPT = `【核心角色与使命】
-你是“松间心舍”的核心疗愈智能体。你是一位如自然般包容、提供沉浸式且慢节奏陪伴的向导。
-你的使命是：提供深度的倾听与共情，并在检测到用户的负面情绪卡点时，作为“分诊系统”精准、静默地将用户引导至最适合当下的疗愈练习。
+// ============================================================
+// BASE_SYSTEM_PROMPT — 接受外部注入的 summary
+// ============================================================
+function buildSystemPrompt(summary = '') {
+  const base = `【核心角色与使命】
+你是"松间心舍"的核心疗愈智能体。你是一位如自然般包容、提供沉浸式且慢节奏陪伴的向导。
+你的使命是：提供深度的倾听与共情，并在检测到用户的负面情绪卡点时，作为"分诊系统"精准、静默地将用户引导至最适合当下的疗愈练习。
 
 【思维与执行协议 (Reasoning & Action Protocol)】
 在响应用户之前，你必须在底层严格遵循以下执行链路：
 1. 深度觉察：分析用户输入，识别其核心情绪状态（如焦虑、内耗、迷茫等）。
 2. 匹配路由：严格对照下方的【核心分诊逻辑树】，判断用户当前状态是否触发特定的练习组件。
-3. 无痕过渡：若决定调用工具，你必须在回复文本 (content) 中输出极其温和、自然的安抚话语（例如：“我感受到了你的疲惫，我们先来做一个深呼吸”），随后立即在底层执行工具调用。
+3. 无痕过渡：若决定调用工具，你必须在回复文本 (content) 中输出极其温和、自然的安抚话语（例如："我感受到了你的疲惫，我们先来做一个深呼吸"），随后立即在底层执行工具调用。
 4. 闲聊判定：仅当用户单纯打招呼、分享开心日常或明确拒绝练习时，不调用工具，仅提供温暖的纯文本回应。
 
 【绝对操作红线 (Critical Constraints)】
@@ -168,7 +154,7 @@ const BASE_SYSTEM_PROMPT = `【核心角色与使命】
 【核心分诊逻辑树 (Routing SOP)】
 一旦用户状态符合以下标签，强制触发对应的 practice_id：
 
-一、 疲惫、恐慌、焦躁 (Panic) 
+一、 疲惫、恐慌、焦躁 (Panic)
 - 心跳快/喘不过气/快要失控 -> trigger_478_breathing
 - 胸堵/胃翻腾/身体发紧等躯体症状 -> trigger_somatic_radar
 - 脑子停不下来/焦虑蔓延/反复想一件事 -> trigger_grounding_five_senses
@@ -179,26 +165,118 @@ const BASE_SYSTEM_PROMPT = `【核心角色与使命】
 - 绝望无助/觉得自己没人要/充满羞耻感 -> trigger_inner_child
 - 觉得自己没价值/不够好/深陷自我否定 -> trigger_affirmation_echo
 
-三、 脑子很乱 (Rumination) 
+三、 脑子很乱 (Rumination)
 - 恐惧未知/害怕失败/不敢迈出下一步 -> trigger_fear_release
 - 道理都懂但做不到/找借口/防御心极强 -> trigger_resistance_exhaustion
 
-四、 迷茫、失去方向、自我约束 (Deep) 
+四、 迷茫、失去方向、自我约束 (Deep)
 - 表达人生迷茫/失去方向/没有盼头 -> trigger_future_vision
 - 缺乏稳定感/想要寻求长期的自我信任 -> trigger_affirmation_30
 - 觉得自己一无是处/陷入死循环的自我惩罚 -> trigger_personal_law
 - 原生家庭创伤/渴望重新开始 -> trigger_birth_memory
 - 长期被压抑/背负难以启齿的沉重秘密 -> trigger_deep_release`
-/**
- * POST /api/chat
- * Non-streaming chat with DashScope
- */
+
+  if (summary) {
+    return `${base}\n\n【用户当前情绪侧写】\n${summary}`
+  }
+  return base
+}
+
+// ============================================================
+// 流式解析辅助：逐行清洗 reasoning_content
+// ============================================================
+function formatSSE(data) {
+  return `data: ${JSON.stringify(data)}\n\n`
+}
+
+async function streamingProxy(proxyUrl, headers, requestBody, signal) {
+  const fetchPromise = fetch(proxyUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(requestBody),
+    signal,
+  })
+
+  let response
+  try {
+    response = await fetchPromise
+  } catch (e) {
+    throw e
+  }
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '')
+    throw new Error(`DashScope API error: ${response.status} — ${errBody}`)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+  const encoder = new TextEncoder()
+  let buffer = ''
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const rawLine of lines) {
+            const line = rawLine.trim()
+            if (!line || line.startsWith(':')) continue
+
+            if (line.startsWith('data:')) {
+              const dataStr = line.slice(5).trim()
+              if (dataStr === '[DONE]') {
+                controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+                continue
+              }
+
+              try {
+                const parsed = JSON.parse(dataStr)
+                // 清洗 delta.reasoning_content，不让它流入前端
+                const delta = parsed.choices?.[0]?.delta
+                if (delta && 'reasoning_content' in delta) {
+                  delete delta.reasoning_content
+                }
+                controller.enqueue(encoder.encode(formatSSE(parsed)))
+              } catch {
+                // 静默忽略截断的 JSON chunk
+              }
+            }
+          }
+        }
+      } catch (e) {
+        controller.error(e)
+      } finally {
+        reader.releaseLock()
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    status: response.status,
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
+}
+
+// ============================================================
+// POST /api/chat — 非流式（保留供后台总结等任务使用）
+// ============================================================
 app.post('/api/chat', async (c) => {
   const requestId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
   console.log(`[${requestId}] === NON-STREAMING CHAT REQUEST ===`)
 
   try {
-    // Access code check
     const ACCESS_CODE = c.env.ACCESS_CODE
     if (ACCESS_CODE) {
       const clientCode = c.req.header('x-access-code')
@@ -207,7 +285,6 @@ app.post('/api/chat', async (c) => {
       }
     }
 
-    // Parse JSON body with error handling
     let body
     try {
       body = await c.req.json()
@@ -215,7 +292,7 @@ app.post('/api/chat', async (c) => {
       return c.json({ error: 'Invalid request', message: 'Request body must be valid JSON' }, 400)
     }
 
-    const { message, sessionId, history = [], tools = [], systemPrompt: extraSystemPrompt } = body
+    const { message, sessionId, history = [], systemPrompt: extraSystemPrompt } = body
 
     if (!message || typeof message !== 'string') {
       return c.json({ error: 'Invalid request', message: 'Message is required and must be a string' }, 400)
@@ -227,11 +304,8 @@ app.post('/api/chat', async (c) => {
     }
 
     const model = c.env.DASHSCOPE_MODEL || 'qwen-plus'
-    const mergedSystemPrompt = extraSystemPrompt
-      ? `${BASE_SYSTEM_PROMPT}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
-      : BASE_SYSTEM_PROMPT
+    const systemPrompt = buildSystemPrompt(extraSystemPrompt || '')
 
-    // Call DashScope API - with 60s timeout (工具调用需要更长时间)
     const fetchController = new AbortController()
     const fetchTimeout = setTimeout(() => fetchController.abort(), 60000)
 
@@ -246,13 +320,13 @@ app.post('/api/chat', async (c) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: model,
+            model,
             messages: [
-              { role: 'system', content: mergedSystemPrompt },
+              { role: 'system', content: systemPrompt },
               ...history.slice(-20).map(h => ({ role: h.role, content: h.content })),
               { role: 'user', content: message }
             ],
-            tools: TOOLS
+            tools: TOOLS,
           }),
           signal: fetchController.signal,
         }
@@ -268,33 +342,28 @@ app.post('/api/chat', async (c) => {
     }
 
     const data = await dashscopeResponse.json()
-    // 兼容 Qwen3 的 output 格式和标准 choices 格式
     const messageData = data.output?.choices?.[0]?.message || data.choices?.[0]?.message || {}
     const toolCalls = data.choices?.[0]?.message?.tool_calls || data.output?.choices?.[0]?.message?.tool_calls
 
-    // console.log(`[Chat] Response structure keys: ${JSON.stringify(data)}`)
     console.log(`[Chat] messageData: ${JSON.stringify(messageData)}`)
     console.log(`[Chat] toolCalls: ${JSON.stringify(toolCalls)}`)
 
     if (toolCalls && toolCalls.length > 0) {
       console.log(`[Chat] Tool calls detected: ${toolCalls.length}`)
-
       const toolResults = []
       for (const toolCall of toolCalls) {
         const result = await executeTool(toolCall)
         toolResults.push({
           toolCallId: toolCall.id,
           toolName: toolCall.function.name,
-          result: result
+          result,
         })
       }
 
-      // 优先使用模型在工具调用之前输出的原始内容
       const aiOriginalContent = messageData.content || ''
       const finalContent = aiOriginalContent.trim()
         ? aiOriginalContent.trim()
         : toolResults[0]?.result?.message || '我为你准备了这个练习，我们一起试试看。'
-      console.log(`[Chat] AI final content: ${finalContent}`)
 
       return c.json({
         messageId: `msg-${Date.now()}`,
@@ -305,7 +374,7 @@ app.post('/api/chat', async (c) => {
       })
     }
 
- const aiResponse = data.choices?.[0]?.message?.content || '谢谢你分享这些。我听到了，愿意继续听你说。'
+    const aiResponse = data.choices?.[0]?.message?.content || '谢谢你分享这些。我听到了，愿意继续听你说。'
 
     return c.json({
       messageId: `msg-${Date.now()}`,
@@ -318,15 +387,14 @@ app.post('/api/chat', async (c) => {
     console.error('[Chat Error]', error)
     return c.json({
       error: 'Internal server error',
-      message: '抱歉，服务遇到了一点问题，但我还在这里陪你。'
+      message: '抱歉，服务遇到了一点问题，但我还在这里陪你。',
     }, 500)
   }
 })
 
-/**
- * POST /api/chat/stream
- * Streaming chat response using Hono's stream helper
- */
+// ============================================================
+// POST /api/chat/stream — 原生流式解析 + reasoning_content 清洗
+// ============================================================
 app.post('/api/chat/stream', async (c) => {
   const requestId = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
   console.log(`[${requestId}] === STREAMING CHAT REQUEST ===`)
@@ -347,70 +415,54 @@ app.post('/api/chat/stream', async (c) => {
       return c.json({ error: 'Invalid request', message: 'Request body must be valid JSON' }, 400)
     }
 
-    const { message, sessionId, history = [], systemPrompt: extraSystemPrompt } = body
+    const { message, sessionId, history = [], summary = '', tool_choice } = body
 
     const apiKey = c.env.DASHSCOPE_API_KEY
+    if (!apiKey) {
+      return c.json({ error: 'Configuration error', message: 'DashScope API key not configured' }, 500)
+    }
+
     const model = c.env.DASHSCOPE_MODEL || 'qwen-plus'
-    const mergedSystemPrompt = extraSystemPrompt
-      ? `${BASE_SYSTEM_PROMPT}\n\n【关于这位用户的历史记忆】\n${extraSystemPrompt}`
-      : BASE_SYSTEM_PROMPT
+    const systemPrompt = buildSystemPrompt(summary)
 
-    // 最多保留最近 20 条历史消息，防止超出上下文窗口
-    const recentHistory = history.slice(-20)
-
-    // 構建標準的 OpenAI 格式請求
+    // 前端已保证 history 只有最近 5 条，后端不再 slice
     const requestBody = {
-      model: model,
+      model,
       messages: [
-        { role: 'system', content: mergedSystemPrompt },
-        ...recentHistory.map(h => ({ role: h.role, content: h.content })),
+        { role: 'system', content: systemPrompt },
+        ...history.map(h => ({ role: h.role, content: h.content })),
         { role: 'user', content: message }
       ],
       stream: true,
-      tools: TOOLS // 確保工具列表被傳入
+      tools: TOOLS,
     }
 
-    const response = await fetch(
-        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'X-DashScope-SSE': 'enable',
-          },
-          body: JSON.stringify(requestBody),
-        }
-      )
-
-    if (!response.ok) {
-      throw new Error(`DashScope API error: ${response.status}`)
-    }
-
-    // 將 DashScope 的流直接作為 Response 返回，實現透明透傳
-    // Hono 的 CORS 中介軟體會自動處理跨域頭
-    return new Response(response.body, {
-      status: response.status,
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
-    })
+    // 使用流式代理：逐行解析 SSE，过滤 reasoning_content
+    return await streamingProxy(
+      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+      {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'X-DashScope-SSE': 'enable',
+      },
+      requestBody,
+    )
 
   } catch (error) {
     console.error('[Stream Error]', error)
+    if (error.name === 'AbortError') {
+      return c.json({ error: 'Aborted', message: 'Request aborted' }, 499)
+    }
     return c.json({
       error: 'Streaming error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     }, 500)
   }
 })
 
-/**
- * POST /api/summarize
- * 记忆淬炼接口：分析对话，提炼焦虑触发点和自我安抚努力
- */
+// ============================================================
+// POST /api/summarize
+// ============================================================
 app.post('/api/summarize', async (c) => {
   try {
     let body
@@ -463,9 +515,8 @@ ${conversation}`
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: model,
+            model,
             messages: [{ role: 'user', content: summarizationPrompt }],
-            tools: TOOLS // <--- 【關鍵修復】：必須把工具列表傳給模型
           }),
           signal: responseController.signal,
         }
@@ -489,7 +540,7 @@ ${conversation}`
       result = {
         triggers: Array.isArray(parsed.triggers) ? parsed.triggers.slice(0, 3) : [],
         selfSoothingEfforts: Array.isArray(parsed.selfSoothingEfforts) ? parsed.selfSoothingEfforts.slice(0, 3) : [],
-        summary: parsed.summary || ''
+        summary: parsed.summary || '',
       }
     } catch (parseError) {
       console.warn('[Summarize] JSON parse failed:', parseError)
@@ -505,23 +556,21 @@ ${conversation}`
   }
 })
 
-/**
- * GET /api/health
- * Health check endpoint
- */
+// ============================================================
+// GET /api/health
+// ============================================================
 app.get('/api/health', (c) => {
   return c.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'healing-backend-cloudflare',
-    version: '2.0.0-hono'
+    version: '3.0.0-smart-context',
   })
 })
 
-/**
- * GET /api/models
- * Get available models
- */
+// ============================================================
+// GET /api/models
+// ============================================================
 app.get('/api/models', (c) => {
   return c.json({
     models: [
@@ -530,7 +579,7 @@ app.get('/api/models', (c) => {
       { id: 'qwen-max', name: '通义千问 Max', description: '最强性能' },
       { id: 'qwen-max-longcontext', name: '通义千问 Max LongContext', description: '支持长文本' },
     ],
-    current: c.env.DASHSCOPE_MODEL || 'qwen-turbo'
+    current: c.env.DASHSCOPE_MODEL || 'qwen-turbo',
   })
 })
 
@@ -539,7 +588,7 @@ app.onError((err, c) => {
   console.error('[Unhandled Error]', err)
   return c.json({
     error: 'Internal server error',
-    message: err.message || 'Something went wrong'
+    message: err.message || 'Something went wrong',
   }, 500)
 })
 
