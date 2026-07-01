@@ -55,100 +55,13 @@
             </div>
 
             <Transition name="photo-dev">
-              <div v-if="message.healingComponent" class="mt-5 max-w-[80%]">
-                <SecurityCard
-                  v-if="message.healingComponent === 'securityCard'"
-                  @complete="onHealingComplete(message.id, $event)"
-                />
-                <GroundingFiveSenses
-                  v-if="message.healingComponent === 'grounding'"
-                  @complete="onHealingComplete(message.id, $event)"
-                />
-                <WaitingTimer
-                  v-if="message.healingComponent === 'waitingTimer'"
-                  @complete="onHealingComplete(message.id, $event)"
-                />
-                <BreathingGuide
-                  v-if="message.healingComponent === 'breathing478'"
-                  mode="478"
-                  @complete="onHealingComplete(message.id, $event)"
-                />
-                <EnergyRetraction
-                  v-if="message.healingComponent === 'energyRetraction'"
-                  @complete="onHealingComplete(message.id, $event)"
-                />
-                <SomaticRadar
-                  v-if="message.healingComponent === 'somaticRadar'"
-                  @complete="onHealingComplete(message.id, $event)"
-                />
-                <Transition name="fade-in-slow">
-                  <InnerChild
-                    v-if="message.healingComponent === 'innerChild'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <ListWriting
-                    v-if="message.healingComponent === 'listWriting'"
-                    :listType="message.listType"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <FreeWriting
-                    v-if="message.healingComponent === 'freeWriting'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <FutureVision
-                    v-if="message.healingComponent === 'futureVision'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <FearRelease
-                    v-if="message.healingComponent === 'fearRelease'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <DeepRelease
-                    v-if="message.healingComponent === 'deepRelease'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <PersonalLaw
-                    v-if="message.healingComponent === 'personalLaw'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <BirthMemory
-                    v-if="message.healingComponent === 'birthMemory'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <ResistanceExhaustion
-                    v-if="message.healingComponent === 'resistanceExhaustion'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <ThirtyDaysAffirmation
-                    v-if="message.healingComponent === 'thirtyDaysAffirmation'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-                <Transition name="fade-in-slow">
-                  <AffirmationEcho
-                    v-if="message.healingComponent === 'affirmationEcho'"
-                    @complete="onHealingComplete(message.id, $event)"
-                  />
-                </Transition>
-              </div>
+              <component
+                v-if="message.healingComponent && healingComponents[message.healingComponent]"
+                :is="healingComponents[message.healingComponent].component"
+                v-bind="{ ...healingComponents[message.healingComponent].props, ...(message.healingComponent === 'listWriting' ? { listType: message.listType } : {}) }"
+                class="mt-5 max-w-[80%]"
+                @complete="onHealingComplete(message.id, $event)"
+              />
             </Transition>
           </div>
         </div>
@@ -235,6 +148,27 @@ import type { HealingComponentType } from '@/types/ai'
 const aiChatStore = useAIChatStore()
 const globalStore = useGlobalStore()
 const userMemoryStore = useUserMemoryStore()
+
+// 动态组件映射表
+const healingComponents: Record<string, { component: any; props?: Record<string, any> }> = {
+  securityCard: { component: SecurityCard },
+  grounding: { component: GroundingFiveSenses },
+  waitingTimer: { component: WaitingTimer },
+  breathing478: { component: BreathingGuide, props: { mode: '478' } },
+  energyRetraction: { component: EnergyRetraction },
+  somaticRadar: { component: SomaticRadar },
+  innerChild: { component: InnerChild },
+  listWriting: { component: ListWriting, props: {} }, // listType 动态绑定
+  freeWriting: { component: FreeWriting },
+  futureVision: { component: FutureVision },
+  fearRelease: { component: FearRelease },
+  deepRelease: { component: DeepRelease },
+  personalLaw: { component: PersonalLaw },
+  birthMemory: { component: BirthMemory },
+  resistanceExhaustion: { component: ResistanceExhaustion },
+  thirtyDaysAffirmation: { component: ThirtyDaysAffirmation },
+  affirmationEcho: { component: AffirmationEcho },
+}
 
 const inputRef = ref<HTMLTextAreaElement | null>(null)
 const messageListRef = ref<HTMLElement | null>(null)

@@ -6,7 +6,25 @@ export type MessageStatus = 'sending' | 'sent' | 'error' | 'streaming'
 
 export type SpecialType = 'depression' | 'anxiety' | 'stress' | 'anger' | 'fear' | 'tired' | 'lonely' | 'sadness' | null
 
-export type HealingComponentType = 'securityCard' | 'grounding' | 'waitingTimer' | 'breathing478' | 'energyRetraction' | 'somaticRadar' | 'innerChild' | 'listWriting' | 'freeWriting' | null
+export type HealingComponentType =
+  | 'securityCard'
+  | 'grounding'
+  | 'waitingTimer'
+  | 'breathing478'
+  | 'energyRetraction'
+  | 'somaticRadar'
+  | 'innerChild'
+  | 'listWriting'
+  | 'freeWriting'
+  | 'futureVision'
+  | 'fearRelease'
+  | 'deepRelease'
+  | 'personalLaw'
+  | 'birthMemory'
+  | 'resistanceExhaustion'
+  | 'thirtyDaysAffirmation'
+  | 'affirmationEcho'
+  | null
 
 export type ListType = 'desires' | 'joys' | 'fears' | 'values' | 'gratitude'
 
