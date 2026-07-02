@@ -51,9 +51,3 @@ export interface AIChatRequest {
   message: string
   sessionId?: string
 }
-
-export interface AIChatResponse {
-  messageId: string
-  content: string
-  sessionId: string
-}

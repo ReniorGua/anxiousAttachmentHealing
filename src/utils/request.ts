@@ -2,7 +2,6 @@ import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig, type Ax
 import { useUserStore } from '@/stores/user'
 import { useGlobalStore } from '@/stores/global'
 import type { ApiResponse } from '@/types'
-import router from '@/router'
 
 // Request interface for cancellation tracking
 interface PendingRequest {

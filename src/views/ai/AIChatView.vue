@@ -142,7 +142,6 @@ import BirthMemory from './components/BirthMemory.vue'
 import ResistanceExhaustion from './components/ResistanceExhaustion.vue'
 import ThirtyDaysAffirmation from './components/ThirtyDaysAffirmation.vue'
 import AffirmationEcho from './components/AffirmationEcho.vue'
-import { audioGroundingEngine } from '@/services/audioService'
 import type { HealingComponentType } from '@/types/ai'
 
 const aiChatStore = useAIChatStore()
@@ -176,7 +175,6 @@ const messageListRef = ref<HTMLElement | null>(null)
 const inputMessage = ref('')
 const isStreaming = ref(false)
 const streamingContent = ref('')
-const isAudioEnabled = ref(false)
 let abortController: AbortController | null = null
 
 const messages = computed(() => aiChatStore.currentMessages)
@@ -197,11 +195,6 @@ const scrollToBottom = async () => {
   if (messageListRef.value) {
     messageListRef.value.scrollTop = messageListRef.value.scrollHeight
   }
-}
-
-const toggleAudio = () => {
-  isAudioEnabled.value = !isAudioEnabled.value
-  audioGroundingEngine.setMuted(!isAudioEnabled.value)
 }
 
 const onHealingComplete = async (messageId: string, event: { completed?: boolean; heartRate?: string }) => {

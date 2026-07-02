@@ -55,13 +55,3 @@ export function formatRelativeTime(date: Date | string | number): string {
   }
 }
 
-/**
- * Parse timestamp to Date object
- */
-export function parseTimestamp(timestamp: number | string): Date | null {
-  const date = new Date(Number(timestamp))
-  if (isNaN(date.getTime())) {
-    return null
-  }
-  return date
-}
